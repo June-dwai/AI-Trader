@@ -60,6 +60,8 @@ export interface ActivePositionSummary {
   entry_price: number;
   size: number;
   pnl_percent: string;
+  tp_price?: number;
+  sl_price?: number;
 }
 
 export async function getAiDecision(
@@ -112,7 +114,7 @@ export async function getAiDecision(
 
     ### ACTIVE POSITION
     ${activePosition
-      ? `HOLDING ${activePosition.side} | Entry: $${activePosition.entry_price} | PnL: ${activePosition.pnl_percent}%`
+      ? `HOLDING ${activePosition.side} | Entry: $${activePosition.entry_price} | PnL: ${activePosition.pnl_percent}% | TP: $${activePosition.tp_price || 'None'} | SL: $${activePosition.sl_price || 'None'}`
       : "NO POSITION"
     }
 

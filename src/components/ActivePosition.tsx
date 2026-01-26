@@ -68,7 +68,10 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
                         <span className={`text-2xl font-bold ${isLong ? 'text-green-400' : 'text-red-400'}`}>
                             {trade.side} {trade.leverage}x
                         </span>
-                        <span className="text-gray-500 text-sm">{trade.symbol}</span>
+                        <span className="text-gray-500 text-sm ml-2">
+                            ({trade.size.toFixed(4)} {trade.symbol.replace('USDT', '')})
+                        </span>
+                        <span className="text-gray-500 text-sm ml-2 hidden">{trade.symbol}</span>
                     </div>
                 </div>
                 <div className={`px-3 py-1 rounded text-sm font-bold ${isProfit ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>

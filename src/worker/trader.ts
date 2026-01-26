@@ -82,7 +82,9 @@ async function runTrader() {
                 side: t.side,
                 entry_price: t.entry_price,
                 size: t.size,
-                pnl_percent: (currentPnlPercent * 100).toFixed(2)
+                pnl_percent: (currentPnlPercent * 100).toFixed(2),
+                tp_price: t.tp_price,
+                sl_price: t.sl_price
             };
         }
 
