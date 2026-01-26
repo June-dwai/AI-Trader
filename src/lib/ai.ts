@@ -125,7 +125,7 @@ export async function getAiDecision(
         - If EMA 50 > EMA 200 -> **BULLISH BIAS**.
     2.  **Define Outlook**:
         - Should focus on ONE direction matching the Bias.
-        - If Bias is Bearish, `next_setup` MUST be for a SHORT (e.g., "Wait for rally to X").
+        - If Bias is Bearish, 'next_setup' MUST be for a SHORT (e.g., "Wait for rally to X").
     3.  **Validate Setup (MANDATORY)**:
         - **Target Profit (TP)**: Must be at least **$1000** away from entry. (Do not scalp crumbs).
         - **Risk:Reward**: Must be >= 1.5.
