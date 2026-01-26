@@ -137,7 +137,12 @@ export async function getAiDecision(
       "stopLoss": Number,
       "takeProfit": Number,
       "riskPerTrade": Number,
-      "setup_reason": "String"
+      "setup_reason": "String",
+      "next_setup": {
+        "short_level": Number,
+        "long_level": Number,
+        "comment": "What to watch for next (e.g., 'Wait for bounce at 88k')"
+      }
     }
   `;
 
