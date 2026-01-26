@@ -137,11 +137,11 @@ export async function getAiDecision(
       "stopLoss": Number,
       "takeProfit": Number,
       "riskPerTrade": Number,
-      "setup_reason": "String",
+      "setup_reason": "EXPLICITLY STATE why SL/TP were chosen. e.g. 'SL placed $500 above 4H EMA 200 Resistance. TP at 1H VWAP Support.'",
       "next_setup": {
-        "short_level": Number, // Set to 0 if Bullish
-        "long_level": Number,  // Set to 0 if Bearish
-        "comment": "Specific plan for the PRIMARY BIAS ONLY. Do not give both."
+        "short_level": Number, // IF BEARISH BIAS: Set to next resistance level. IF BULLISH: MUST BE 0.
+        "long_level": Number,  // IF BULLISH BIAS: Set to next support level. IF BEARISH: MUST BE 0.
+        "comment": "Plan for the PRIMARY BIAS ONLY. Stop hallucinating counter-trend setups."
       }
     }
   `;
