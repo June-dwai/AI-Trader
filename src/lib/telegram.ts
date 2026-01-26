@@ -6,7 +6,8 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 export async function sendTelegramMessage(message: string): Promise<boolean> {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-        console.warn("⚠️ Telegram credentials not found in env. Skipping notification.");
+        // Suppress warning if not set to avoid log spam, or use a flag?
+        // Actually, user knows they need it. Checking env once might be better but for now simpler is fine.
         return false;
     }
 
@@ -18,7 +19,6 @@ export async function sendTelegramMessage(message: string): Promise<boolean> {
             text: message,
             parse_mode: 'Markdown'
         });
-        console.log("✅ Telegram Notification Sent.");
         return true;
     } catch (error) {
         console.error("❌ Failed to send Telegram message:", error);

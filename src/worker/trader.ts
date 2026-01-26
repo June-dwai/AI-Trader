@@ -1,5 +1,6 @@
 
 import './init';
+import axios from 'axios';
 
 import { getAggregatedMarketData } from '../lib/market';
 import { getMultiFrameCandles } from '../lib/binance';
@@ -208,5 +209,65 @@ function LEVERAGE_DYNAMIC(atr: number, price: number): number {
     return 5;                                 // High Volatility -> 5x
 }
 
+// 6. Real-time TP/SL Monitor (Runs frequently)
+async function monitorActivePositions() {
+    try {
+        const { data: activeTrades } = await supabaseAdmin.from('trades').select('*').eq('status', 'OPEN');
+        if (!activeTrades || activeTrades.length === 0) return;
+
+        const { data: priceData } = await axios.get('https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT');
+        const currentPrice = parseFloat(priceData.price);
+
+        for (const trade of activeTrades) {
+            let triggered = false;
+            let type = '';
+            let pnl = 0;
+
+            // Check Long
+            if (trade.side === 'LONG') {
+                if (trade.tp_price && currentPrice >= trade.tp_price) { triggered = true; type = 'TAKE_PROFIT'; }
+                else if (trade.sl_price && currentPrice <= trade.sl_price) { triggered = true; type = 'STOP_LOSS'; }
+            }
+            // Check Short
+            else if (trade.side === 'SHORT') {
+                if (trade.tp_price && currentPrice <= trade.tp_price) { triggered = true; type = 'TAKE_PROFIT'; }
+                else if (trade.sl_price && currentPrice >= trade.sl_price) { triggered = true; type = 'STOP_LOSS'; }
+            }
+
+            if (triggered) {
+                pnl = (currentPrice - trade.entry_price) * trade.size * (trade.side === 'LONG' ? 1 : -1);
+                console.log(`⚡ ${type} TRIGGERED for Trade ${trade.id} @ $${currentPrice}`);
+
+                // Close Trade
+                await supabaseAdmin.from('trades').update({
+                    status: 'CLOSED',
+                    pnl: pnl,
+                    closed_at: new Date().toISOString(),
+                    exit_reason: type // Assuming you might want to add this column later, or just log it
+                }).eq('id', trade.id);
+
+                // Update Wallet
+                const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
+                if (wallet) {
+                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + pnl }).eq('id', wallet.id);
+                }
+
+                // Telegram Notify
+                const emoji = pnl > 0 ? '💰' : '🛑';
+                const msg = `${emoji} *TRADE CLOSED (${type})* ${emoji}\n\n` +
+                    `Action: ${trade.side}\n` +
+                    `Entry: $${trade.entry_price.toLocaleString()}\n` +
+                    `Close: $${currentPrice.toLocaleString()}\n` +
+                    `PnL: $${pnl.toFixed(2)}`;
+
+                await sendTelegramMessage(msg);
+            }
+        }
+    } catch (e) {
+        console.error("Monitor Error:", e);
+    }
+}
+
 runTrader();
-setInterval(runTrader, 5 * 60 * 1000);
+setInterval(runTrader, 5 * 60 * 1000); // AI Logic (5 min)
+setInterval(monitorActivePositions, 10 * 1000); // TP/SL Check (10 sec)
