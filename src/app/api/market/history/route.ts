@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getBitcoinCandles } from '@/lib/binance';
-import { calculateIndicators } from '@/lib/indicators';
+import { EMA, ATR, VWAP } from 'technicalindicators';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,6 @@ export async function GET() {
         const candles = await getBitcoinCandles('1m', 6000);
 
         // We can reuse the existing calculator logic, but we need the arrays directly.
-        const { EMA, ATR, VWAP } = require('technicalindicators');
 
         const closes = candles.map(c => c.close);
         const highs = candles.map(c => c.high);

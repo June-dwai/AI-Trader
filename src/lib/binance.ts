@@ -28,7 +28,7 @@ export async function getBitcoinCandles(interval: string = '15m', count: number 
         // Binance FAPI limit is 1500 per request. Safe chunk size 1000.
         const limit = Math.min(remaining, 1000);
 
-        const params: any = {
+        const params: Record<string, string | number> = {
             symbol: 'BTCUSDT',
             interval: interval,
             limit: limit
@@ -43,13 +43,13 @@ export async function getBitcoinCandles(interval: string = '15m', count: number 
 
             if (!data || data.length === 0) break;
 
-            const candles = data.map((d: any[]) => ({
-                openTime: d[0],
-                open: parseFloat(d[1]),
-                high: parseFloat(d[2]),
-                low: parseFloat(d[3]),
-                close: parseFloat(d[4]),
-                volume: parseFloat(d[5]),
+            const candles = data.map((d: (string | number)[]) => ({
+                openTime: Number(d[0]),
+                open: parseFloat(String(d[1])),
+                high: parseFloat(String(d[2])),
+                low: parseFloat(String(d[3])),
+                close: parseFloat(String(d[4])),
+                volume: parseFloat(String(d[5])),
             }));
 
             // Prepend because we are fetching backwards (endTime)
@@ -74,7 +74,6 @@ export async function getBitcoinCandles(interval: string = '15m', count: number 
 }
 
 export async function getMultiFrameCandles() {
-    const intervals = ['1m', '5m', '1h', '4h', '1d'];
     const promises = [
         getBitcoinCandles('1m', 2500), // Request 2500 for EMA2000 + Rubbing Check
         getBitcoinCandles('5m', 500),

@@ -55,6 +55,13 @@ const STRATEGIES = `
   2.  **RR Ratio >= 1.5**: Distance to Target > 1.5 * Distance to Stop.
 `;
 
+export interface ActivePositionSummary {
+  side: string;
+  entry_price: number;
+  size: number;
+  pnl_percent: string;
+}
+
 export async function getAiDecision(
   indicators: ReturnType<typeof calculateIndicators>,
   marketData: MarketData,
@@ -62,7 +69,7 @@ export async function getAiDecision(
   fundingHistory: number[],
   previousDecision: TradeDecision | null,
   recentTrades: string,
-  activePosition: any | null // Current Open Trade Details
+  activePosition: ActivePositionSummary | null // Current Open Trade Details
 ): Promise<TradeDecision> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash',
@@ -120,7 +127,7 @@ export async function getAiDecision(
     3.  **Plan Setup OR Manage Position**:
         - **IF HOLDING POSITION**:
           - **Action**: DECIDE to HOLD, CLOSE, or UPDATE_SL.
-          - **JSON Output**: `stopLoss` and `takeProfit` MUST be the CURRENT active levels (unless updating).
+          - **JSON Output**: 'stopLoss' and 'takeProfit' MUST be the CURRENT active levels (unless updating).
           - **Reasoning**: Explain why we are holding (e.g., "Price still respecting Support").
         - **IF NO POSITION**:
           - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.

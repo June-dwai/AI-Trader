@@ -22,38 +22,33 @@ interface WalletCardProps {
 
 export default function WalletCard({ initialBalance, initialPnL, activeTrade }: WalletCardProps) {
     const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-    const [equity, setEquity] = useState<number>(initialBalance);
-    const [unrealizedPnL, setUnrealizedPnL] = useState<number>(0);
+
+    // Derived State (No need for useEffect)
+    let unrealizedPnL = 0;
+    let equity = initialBalance;
+
+    if (activeTrade && currentPrice) {
+        const isLong = activeTrade.side === 'LONG';
+        // Correct PnL Formula: (Price Diff) * Size * Direction
+        const pnlValue = (currentPrice - activeTrade.entry_price) * activeTrade.size * (isLong ? 1 : -1);
+        unrealizedPnL = pnlValue;
+        equity = initialBalance + pnlValue;
+    }
 
     useEffect(() => {
         const fetchPrice = async () => {
             try {
                 const p = await getBitcoinPrice();
                 setCurrentPrice(p);
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
         };
 
         fetchPrice();
         const interval = setInterval(fetchPrice, 5000); // Sync with ActivePosition
         return () => clearInterval(interval);
     }, []);
-
-    useEffect(() => {
-        if (!activeTrade || !currentPrice) {
-            setUnrealizedPnL(0);
-            setEquity(initialBalance);
-            return;
-        }
-
-        const isLong = activeTrade.side === 'LONG';
-        // Correct PnL Formula: (Price Diff) * Size * Direction
-        // NO Leverage multiplication here (that's for ROE %)
-        const pnlValue = (currentPrice - activeTrade.entry_price) * activeTrade.size * (isLong ? 1 : -1);
-
-        setUnrealizedPnL(pnlValue);
-        setEquity(initialBalance + pnlValue);
-
-    }, [currentPrice, activeTrade, initialBalance]);
 
     return (
         <div className="bg-gradient-to-br from-gray-900 to-gray-900 border border-gray-800 p-6 rounded-2xl relative overflow-hidden group hover:border-blue-500/50 transition-colors">
@@ -73,6 +68,9 @@ export default function WalletCard({ initialBalance, initialPnL, activeTrade }: 
                 {/* Realized PnL Badge */}
                 <div className="text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded-full">
                     Balance: ${initialBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </div>
+                <div className={`text-xs px-2 py-1 rounded-full ${initialPnL >= 0 ? 'text-green-500 bg-green-900/10' : 'text-red-500 bg-red-900/10'}`}>
+                    Realized: {initialPnL >= 0 ? '+' : ''}{initialPnL.toFixed(2)}
                 </div>
 
                 {/* Unrealized PnL Badge (Live) */}

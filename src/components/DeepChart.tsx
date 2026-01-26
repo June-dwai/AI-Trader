@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { createChart, ColorType, IChartApi, CandlestickSeries, LineSeries } from 'lightweight-charts';

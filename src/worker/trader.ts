@@ -1,11 +1,12 @@
 
 import './init';
 
-import { getAggregatedMarketData, getCandles } from '../lib/market';
+import { getAggregatedMarketData } from '../lib/market';
 import { getMultiFrameCandles } from '../lib/binance';
 import { calculateIndicators } from '../lib/indicators';
 import { getAiDecision } from '../lib/ai';
 import { supabaseAdmin } from '../lib/supabase';
+import { sendTelegramMessage } from '../lib/telegram';
 
 async function runTrader() {
     console.log('--- Starting Trader Bot v2.0 (Microstructure) ---', new Date().toISOString());
@@ -42,7 +43,7 @@ async function runTrader() {
 
         let previousDecision = null;
         if (lastLog?.ai_response) {
-            try { previousDecision = JSON.parse(lastLog.ai_response); } catch (e) { }
+            try { previousDecision = JSON.parse(lastLog.ai_response); } catch { }
         }
 
         // Fetch recent closed trades for Self-Reflection
@@ -137,6 +138,7 @@ async function runTrader() {
                     size: (riskAmount / price), // Small size
                     status: 'OPEN'
                 });
+                if (error) console.error("Add Trade Error", error);
             }
             else if (decision.action === 'UPDATE_SL') {
                 console.log(`🛡️ Moving Stop Loss to: ${decision.stopLoss}`);
@@ -171,7 +173,21 @@ async function runTrader() {
                 });
 
                 if (error) console.error("Trade Insert Error", error);
-                else console.log(`Trade Opened! Size: ${sizeBTC.toFixed(4)} BTC, Risk: ${(riskPerTrade * 100).toFixed(1)}%`);
+                else {
+                    console.log(`Trade Opened! Size: ${sizeBTC.toFixed(4)} BTC, Risk: ${(riskPerTrade * 100).toFixed(1)}%`);
+
+                    // --- TELEGRAM NOTIFICATION ---
+                    const emoji = decision.action === 'LONG' ? '🟢' : '🔴';
+                    const msg = `🚀 *AI TRADER SIGNAL* 🚀\n\n` +
+                        `Action: *${decision.action}* ${emoji}\n` +
+                        `Entry: $${price.toLocaleString()}\n` +
+                        `Target: $${decision.takeProfit.toLocaleString()}\n` +
+                        `Stop: $${decision.stopLoss.toLocaleString()}\n\n` +
+                        `Confidence: ${decision.confidence}%\n` +
+                        `Reason: ${decision.setup_reason || decision.reason}`;
+
+                    await sendTelegramMessage(msg);
+                }
             }
         }
 

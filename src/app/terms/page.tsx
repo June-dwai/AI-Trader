@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function TermsPage() {
     return (
         <main className="min-h-screen bg-black text-gray-300 p-8 md:p-12">
@@ -16,7 +18,7 @@ export default function TermsPage() {
                     </h2>
                     <div className="bg-red-900/10 border border-red-900/30 p-6 rounded-xl text-sm leading-relaxed text-gray-300">
                         <p className="font-bold mb-2">
-                            Using "AI Bitcoin Trader" (hereinafter referred to as "The Service") means you agree to the following absolute disclaimers:
+                            Using &quot;AI Bitcoin Trader&quot; (hereinafter referred to as &quot;The Service&quot;) means you agree to the following absolute disclaimers:
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
                             <li>
@@ -62,9 +64,9 @@ export default function TermsPage() {
                 </section>
 
                 <div className="pt-8 border-t border-gray-800 text-center">
-                    <a href="/" className="px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors text-sm font-bold">
+                    <Link href="/" className="px-6 py-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors text-sm font-bold">
                         I Understand & Return to Dashboard
-                    </a>
+                    </Link>
                 </div>
 
             </div>

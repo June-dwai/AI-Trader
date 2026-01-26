@@ -2,9 +2,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 import PriceTicker from '@/components/PriceTicker';
 import RealtimeLogs from '@/components/RealtimeLogs';
 import ActivePosition from '@/components/ActivePosition';
-import { PlayCircle, DollarSign, Activity } from 'lucide-react';
+import { PlayCircle, Activity } from 'lucide-react';
 import TradeHistory from '@/components/TradeHistory';
-import TradingViewChart from '@/components/TradingViewChart';
+// import TradingViewChart from '@/components/TradingViewChart'; // Kept for reference or future use if needed, actually let's just remove it to clean up lint.
 import DeepChart from '@/components/DeepChart';
 import WalletCard from '@/components/WalletCard';
 
@@ -105,7 +105,7 @@ export default async function Home() {
         {/* PRICE CHART SECTION */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-3">
-            <TradingViewChart />
+            <DeepChart />
           </div>
         </div>
 

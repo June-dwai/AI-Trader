@@ -1,15 +1,23 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
+interface Log {
+    id: number;
+    created_at: string;
+    type: string;
+    message: string;
+    ai_response?: string;
+}
+
 export default function RealtimeLogs() {
-    const [logs, setLogs] = useState<any[]>([]);
+    const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const fetchLogs = async () => {
+    const fetchLogs = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('logs')
@@ -23,18 +31,19 @@ export default function RealtimeLogs() {
             console.log("Fetched logs:", data);
         }
 
-        if (data) setLogs(data);
+        if (data) setLogs(data as Log[]);
         setLoading(false);
-    };
+    }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line 
         fetchLogs();
 
         // Realtime subscription (Backup)
         const channel = supabase
             .channel('logs-channel')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'logs' }, (payload) => {
-                setLogs(prev => [payload.new, ...prev].slice(0, 20));
+                setLogs(prev => [payload.new as Log, ...prev].slice(0, 20));
             })
             .subscribe();
 
@@ -45,7 +54,7 @@ export default function RealtimeLogs() {
             supabase.removeChannel(channel);
             clearInterval(interval);
         };
-    }, []);
+    }, [fetchLogs]);
 
     return (
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm relative">
@@ -75,8 +84,18 @@ export default function RealtimeLogs() {
     );
 }
 
+interface AIData {
+    action: string;
+    confidence: number;
+    reason: string;
+    next_setup?: { comment: string; short_level: number; long_level: number };
+    stopLoss?: number;
+    takeProfit?: number;
+    setup_reason?: string;
+}
+
 function AIReasoningViewer({ responseStr }: { responseStr: string }) {
-    let data;
+    let data: AIData;
     try {
         data = JSON.parse(responseStr);
     } catch {

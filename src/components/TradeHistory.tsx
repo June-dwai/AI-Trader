@@ -1,15 +1,24 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
+interface Trade {
+    id: number;
+    closed_at: string;
+    side: string;
+    entry_price: number;
+    pnl: number;
+    size: number;
+}
+
 export default function TradeHistory() {
-    const [trades, setTrades] = useState<any[]>([]);
+    const [trades, setTrades] = useState<Trade[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchTrades = async () => {
+    const fetchTrades = useCallback(async () => {
         const { data } = await supabase
             .from('trades')
             .select('*')
@@ -17,12 +26,14 @@ export default function TradeHistory() {
             .order('closed_at', { ascending: false })
             .limit(10);
 
-        if (data) setTrades(data);
+        if (data) setTrades(data as Trade[]);
         setLoading(false);
-    };
+    }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         fetchTrades();
+
         // Subscribe to trade updates
         const channel = supabase
             .channel('trades-history')
@@ -32,7 +43,7 @@ export default function TradeHistory() {
             .subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, []);
+    }, [fetchTrades]);
 
     if (loading) return <div className="text-gray-500 text-sm">Loading history...</div>;
 
