@@ -1,11 +1,15 @@
-import { supabaseAdmin } from '@/lib/supabase';
-import PriceTicker from '@/components/PriceTicker';
-import RealtimeLogs from '@/components/RealtimeLogs';
-import ActivePosition from '@/components/ActivePosition';
-import { PlayCircle, DollarSign, Activity } from 'lucide-react';
-import TradeHistory from '@/components/TradeHistory';
-import TradingViewChart from '@/components/TradingViewChart';
-import DeepChart from '@/components/DeepChart';
+import WalletCard from '@/components/WalletCard'; // Import
+
+// ... existing imports ...
+
+// ... inside Home component ...
+
+{/* Wallet & WinRate Cards */ }
+<WalletCard
+  initialBalance={wallet.balance || 1000}
+  initialPnL={stats.totalPnL}
+  activeTrade={activeTrade}
+/>
 
 // Force dynamic rendering since we fetch DB data
 export const dynamic = 'force-dynamic';
@@ -64,18 +68,12 @@ export default async function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Wallet & WinRate Cards */}
           {/* Note: keeping existing stats cards */}
-          <div className="bg-gradient-to-br from-gray-900 to-gray-900 border border-gray-800 p-6 rounded-2xl relative overflow-hidden group hover:border-blue-500/50 transition-colors">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <DollarSign className="w-24 h-24 text-blue-500" />
-            </div>
-            <p className="text-gray-400 text-sm font-medium">Wallet Balance</p>
-            <p className="text-4xl font-bold mt-2 text-white">
-              ${wallet.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </p>
-            <div className="mt-4 flex items-center gap-2 text-xs text-green-400 bg-green-900/20 w-fit px-2 py-1 rounded-full">
-              +{(stats.totalPnL).toFixed(2)} USDT PnL
-            </div>
-          </div>
+          {/* Wallet & WinRate Cards */}
+          <WalletCard
+            initialBalance={wallet.balance || 1000}
+            initialPnL={stats.totalPnL}
+            activeTrade={activeTrade}
+          />
 
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
             <p className="text-gray-400 text-sm font-medium">Win Rate</p>
