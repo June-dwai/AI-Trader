@@ -151,6 +151,20 @@ export default async function Home() {
         </div>
 
       </div>
+      <footer className="mt-20 border-t border-gray-900 pt-8 pb-12 text-center">
+        <div className="max-w-2xl mx-auto px-4">
+          <p className="text-xs text-gray-600 leading-relaxed mb-4">
+            <strong>DISCLAIMER:</strong> This application is for educational and informational purposes only. It is not financial advice.
+            Cryptocurrency trading involves substantial risk of loss and is not suitable for every investor.
+            The developers are not responsible for any financial losses incurred from using this software.
+          </p>
+          <div className="flex justify-center gap-6 text-xs text-gray-500 font-bold uppercase tracking-wider">
+            <a href="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</a>
+            <a href="/terms" className="hover:text-blue-400 transition-colors">Risk Disclosure</a>
+            <span className="text-gray-700">Not for US Residents</span>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

@@ -117,32 +117,39 @@ export async function getAiDecision(
     2.  **Identify Key Levels (S/R)**:
         - Where is the nearest Support? (EMA 200, VWAP, White Zone Lower, Swing Low)
         - Where is the nearest Resistance? (EMA 200, VWAP, White Zone Upper, Swing High)
-    3.  **Plan Setup**:
-        - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.
-        - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
-        - **RANGE Bias**: Sell Resistance, Buy Support.
-    4.  **Validate Setup (MANDATORY)**:
+    3.  **Plan Setup OR Manage Position**:
+        - **IF HOLDING POSITION**:
+          - **Action**: DECIDE to HOLD, CLOSE, or UPDATE_SL.
+          - **JSON Output**: `stopLoss` and `takeProfit` MUST be the CURRENT active levels (unless updating).
+          - **Reasoning**: Explain why we are holding (e.g., "Price still respecting Support").
+        - **IF NO POSITION**:
+          - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.
+          - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
+          - **RANGE Bias**: Sell Resistance, Buy Support.
+
+    4.  **Validate Setup (For NEW Trades)**:
         - **Placement**: TP and SL MUST be attached to a specific Structural Level (e.g., EMA 200, Swing High).
         - **Stop Loss (SL)**: Must be BEHIND a Support/Resistance level AND > $500 from entry.
         - **Take Profit (TP)**: Must be AT next Support/Resistance level AND > $1000 from entry.
         - **Risk:Reward**: Prioritize setups with RR >= 1.5.
         - If conditions not met, output ACTION: "STAY".
+
     5.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
       "strategy_used": "TREND_A" | "RANGE_B",
-      "reason": "Explain Structure (Cross), S/R Level tested, and Entry Trigger.",
+      "reason": "Explain Structure (Cross) and S/R Level.",
       "confidence": Number (0-100),
-      "stopLoss": Number,
-      "takeProfit": Number,
+      "stopLoss": Number, // IF HOLDING: Current SL. IF NEW: Proposed SL.
+      "takeProfit": Number, // IF HOLDING: Current TP. IF NEW: Proposed TP.
       "riskPerTrade": Number,
-      "setup_reason": "You MUST cite the S/R Level used. Do NOT say 'placed above entry'. Say 'SL placed above 4H Swing High ($88,500) which is >$500 away'.",
+      "setup_reason": "IF HOLDING: Explain management (e.g. 'Holding as price is above EMA'). IF NEW: Explain TP/SL placement citing S/R levels.",
       "next_setup": {
-        "short_level": Number, // IF BEARISH BIAS: Set to next resistance level. IF BULLISH: MUST BE 0.
-        "long_level": Number,  // IF BULLISH BIAS: Set to next support level. IF BEARISH: MUST BE 0.
-        "comment": "Plan for the PRIMARY BIAS ONLY. Stop hallucinating counter-trend setups."
+        "short_level": Number, // Set to 0 if Bullish
+        "long_level": Number,  // Set to 0 if Bearish
+        "comment": "IF HOLDING: 'Monitoring for exit/add'. IF NEW: Plan for Primary Bias."
       }
     }
   `;
