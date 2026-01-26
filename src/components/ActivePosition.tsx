@@ -12,9 +12,12 @@ interface Trade {
     leverage: number;
     size: number;
     opened_at: string;
+    sl_price?: number;
+    tp_price?: number;
 }
 
 export default function ActivePosition({ trade }: { trade: Trade | null }) {
+    // ... existing state and effect ...
     const [currentPrice, setCurrentPrice] = useState<number | null>(null);
 
     useEffect(() => {
@@ -30,6 +33,7 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
     }, []);
 
     if (!trade) {
+        // ... existing no trade UI ...
         return (
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 h-48 flex flex-col items-center justify-center text-center opacity-60">
                 <h3 className="text-gray-500 font-bold uppercase tracking-wider mb-2">No Active Position</h3>
@@ -72,7 +76,7 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                     <p className="text-gray-500">Entry Price</p>
                     <p className="text-white font-mono">${entryPrice.toLocaleString()}</p>
@@ -82,14 +86,17 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
                     <p className="text-white font-mono">${currentPrice.toLocaleString()}</p>
                 </div>
                 <div>
-                    <p className="text-gray-500">Size (BTC)</p>
-                    <p className="text-white font-mono">{trade.size.toFixed(4)} BTC</p>
-                </div>
-                <div>
                     <p className="text-gray-500">PnL (ROE)</p>
                     <p className={`font-mono font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                         {pnlValue > 0 ? '+' : ''}{pnlValue.toFixed(2)} USDT ({(pnlPercent * 100).toFixed(2)}%)
                     </p>
+                </div>
+                <div>
+                    <p className="text-gray-500">Target / Stop</p>
+                    <div className="flex gap-3 font-mono text-xs mt-1">
+                        <span className="text-green-400">TP: ${trade.tp_price?.toLocaleString() || '-'}</span>
+                        <span className="text-red-400">SL: ${trade.sl_price?.toLocaleString() || '-'}</span>
+                    </div>
                 </div>
             </div>
         </div>

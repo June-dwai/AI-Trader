@@ -165,7 +165,9 @@ async function runTrader() {
                     entry_price: price,
                     leverage: LEVERAGE_DYNAMIC(indicators.m5.atr, price),
                     size: sizeBTC,
-                    status: 'OPEN'
+                    status: 'OPEN',
+                    sl_price: decision.stopLoss, // Storage for UI
+                    tp_price: decision.takeProfit // Storage for UI
                 });
 
                 if (error) console.error("Trade Insert Error", error);
