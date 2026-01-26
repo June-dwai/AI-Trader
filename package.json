@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "concurrently \"npm run worker\" \"next start\" --names \"WORKER,NEXT\" --prefix-colors \"yellow,blue\"",
     "lint": "eslint",
     "worker": "tsx src/worker/trader.ts"
   },
@@ -13,6 +13,7 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.91.1",
     "axios": "^1.13.3",
+    "concurrently": "^9.1.2",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "lightweight-charts": "^5.1.0",
@@ -21,7 +22,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
-    "technicalindicators": "^3.1.0"
+    "technicalindicators": "^3.1.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -32,7 +34,6 @@
     "eslint-config-next": "16.1.4",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
