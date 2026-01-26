@@ -121,9 +121,11 @@ export async function getAiDecision(
         - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.
         - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
         - **RANGE Bias**: Sell Resistance, Buy Support.
-    4.  **Validate**:
-        - TP > $1000 distance?
-        - RR >= 1.5?
+    4.  **Validate Setup (MANDATORY)**:
+        - **Take Profit (TP)**: Must be at least **$1000** away from entry. (Do not scalp crumbs).
+        - **Stop Loss (SL)**: Must be at least **$500** away from entry.
+        - **Risk:Reward**: Prioritize setups with RR >= 1.5.
+        - If conditions not met, output ACTION: "STAY".
     5.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
@@ -137,9 +139,9 @@ export async function getAiDecision(
       "riskPerTrade": Number,
       "setup_reason": "String",
       "next_setup": {
-        "short_level": Number,
-        "long_level": Number,
-        "comment": "Specific plan: 'Short on rejection at 98500 (1H EMA 200)'"
+        "short_level": Number, // Set to 0 if Bullish
+        "long_level": Number,  // Set to 0 if Bearish
+        "comment": "Specific plan for the PRIMARY BIAS ONLY. Do not give both."
       }
     }
   `;
