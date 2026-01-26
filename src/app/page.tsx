@@ -1,15 +1,12 @@
-import WalletCard from '@/components/WalletCard'; // Import
-
-// ... existing imports ...
-
-// ... inside Home component ...
-
-{/* Wallet & WinRate Cards */ }
-<WalletCard
-  initialBalance={wallet.balance || 1000}
-  initialPnL={stats.totalPnL}
-  activeTrade={activeTrade}
-/>
+import { supabaseAdmin } from '@/lib/supabase';
+import PriceTicker from '@/components/PriceTicker';
+import RealtimeLogs from '@/components/RealtimeLogs';
+import ActivePosition from '@/components/ActivePosition';
+import { PlayCircle, DollarSign, Activity } from 'lucide-react';
+import TradeHistory from '@/components/TradeHistory';
+import TradingViewChart from '@/components/TradingViewChart';
+import DeepChart from '@/components/DeepChart';
+import WalletCard from '@/components/WalletCard';
 
 // Force dynamic rendering since we fetch DB data
 export const dynamic = 'force-dynamic';
@@ -66,8 +63,6 @@ export default async function Home() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Wallet & WinRate Cards */}
-          {/* Note: keeping existing stats cards */}
           {/* Wallet & WinRate Cards */}
           <WalletCard
             initialBalance={wallet.balance || 1000}
