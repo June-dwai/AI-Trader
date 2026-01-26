@@ -4,8 +4,8 @@ import RealtimeLogs from '@/components/RealtimeLogs';
 import ActivePosition from '@/components/ActivePosition';
 import { PlayCircle, Activity } from 'lucide-react';
 import TradeHistory from '@/components/TradeHistory';
-// import TradingViewChart from '@/components/TradingViewChart'; // Kept for reference or future use if needed, actually let's just remove it to clean up lint.
-import DeepChart from '@/components/DeepChart';
+import TradingViewChart from '@/components/TradingViewChart';
+// import DeepChart from '@/components/DeepChart';
 import WalletCard from '@/components/WalletCard';
 
 // Force dynamic rendering since we fetch DB data
@@ -105,7 +105,7 @@ export default async function Home() {
         {/* PRICE CHART SECTION */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-3">
-            <DeepChart />
+            <TradingViewChart />
           </div>
         </div>
 
