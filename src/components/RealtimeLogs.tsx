@@ -11,11 +11,18 @@ export default function RealtimeLogs() {
 
     const fetchLogs = async () => {
         setLoading(true);
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('logs')
             .select('*')
             .order('created_at', { ascending: false })
             .limit(20);
+
+        if (error) {
+            console.error("Error fetching logs:", error);
+        } else {
+            console.log("Fetched logs:", data);
+        }
+
         if (data) setLogs(data);
         setLoading(false);
     };
