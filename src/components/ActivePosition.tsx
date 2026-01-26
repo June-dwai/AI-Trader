@@ -45,11 +45,12 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
     const leverage = trade.leverage;
     const isLong = trade.side === 'LONG';
 
-    const pnlPercent = isLong
-        ? ((currentPrice - entryPrice) / entryPrice) * leverage
-        : ((entryPrice - currentPrice) / entryPrice) * leverage;
+    const priceDiffPercent = isLong
+        ? (currentPrice - entryPrice) / entryPrice
+        : (entryPrice - currentPrice) / entryPrice;
 
-    const pnlValue = (trade.size * entryPrice) * pnlPercent;
+    const pnlPercent = priceDiffPercent * leverage; // ROE
+    const pnlValue = (currentPrice - entryPrice) * trade.size * (isLong ? 1 : -1);
     const isProfit = pnlValue >= 0;
 
     return (
