@@ -90,14 +90,15 @@ export async function getAiDecision(
     EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     EMA 200: ${indicators.h4.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Swing High/Low: $${indicators.h4.struct.high.toLocaleString()} / $${indicators.h4.struct.low.toLocaleString()}
-    Trend Bias: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'BULLISH' : 'BEARISH'}
+    Trend Structure: ${indicators.h4.ema50 > indicators.h4.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
+    Price Level: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'Above EMA 50' : 'Below EMA 50'}
     
     [1 Hour]
     EMA 50: ${indicators.h1.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     EMA 200: ${indicators.h1.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Swing High/Low: $${indicators.h1.struct.high.toLocaleString()} / $${indicators.h1.struct.low.toLocaleString()}
     ADX: ${indicators.h1.adx.toFixed(1)}
-    Trend Bias: ${indicators.h1.currentPrice > indicators.h1.ema50 ? 'BULLISH' : 'BEARISH'}
+    Trend Structure: ${indicators.h1.ema50 > indicators.h1.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
 
     ### MICRO STRUCTURE (5m / 1m) - **ENTRY TIMING**
     [5 Minute]
@@ -118,21 +119,23 @@ export async function getAiDecision(
     }
 
     ### DECISION PROCESS
-    1.  **Analyze Macro Trend (4H/1H) & White Zone**: Determine GLOBAL BIAS.
-    2.  **Plot Support & Resistance**: 
-        - Collect all Levels: EMA 200s, VWAP, Swing Highs/Lows, White Zone Bounds.
-        - Determine Nearest Support and Nearest Resistance to Current Price.
-    3.  **Evaluate Setup**:
-        - Is there room to move? (Distance to Resistance for Long > Distance to Support for Short?)
-        - **Check RR**: Calculate Potential Risk (Entry - PivotLow) vs Reward (Next Resistance - Entry). Is Ratio >= 1.5?
-    4.  **Confirm Entry**: Price Action Trigger (Pinbar/Engulfing).
-    5.  **Output**: Action, Confidence, Strategy.
+    1.  **Analyze Macro Structure**: 
+        - Look at EMA 50 vs EMA 200 on 4H/1H.
+        - If EMA 50 < EMA 200 -> **BEARISH BIAS** (Even if Price > EMA 50, it's just a retracement).
+        - If EMA 50 > EMA 200 -> **BULLISH BIAS**.
+    2.  **Define Outlook**:
+        - Should focus on ONE direction matching the Bias.
+        - If Bias is Bearish, `next_setup` MUST be for a SHORT (e.g., "Wait for rally to X").
+    3.  **Validate Setup (MANDATORY)**:
+        - **Target Profit (TP)**: Must be at least **$1000** away from entry. (Do not scalp crumbs).
+        - **Risk:Reward**: Must be >= 1.5.
+    4.  **Output Decision**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
       "strategy_used": "TREND_A" | "RANGE_B",
-      "reason": "Explain Trend, S/R, and RR calculation.",
+      "reason": "Explain Trend Structure (EMA Align), S/R check, and RR > 1.5 check.",
       "confidence": Number (0-100),
       "stopLoss": Number,
       "takeProfit": Number,
@@ -141,7 +144,7 @@ export async function getAiDecision(
       "next_setup": {
         "short_level": Number,
         "long_level": Number,
-        "comment": "What to watch for next (e.g., 'Wait for bounce at 88k')"
+        "comment": "Specific plan for the PRIMARY BIAS direction. e.g. 'Short at 98500 (EMA50)'"
       }
     }
   `;
