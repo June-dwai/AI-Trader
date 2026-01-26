@@ -145,7 +145,7 @@ async function runTrader() {
 
         } else {
             // Entry Logic (Only if NO active trade)
-            if (['LONG', 'SHORT'].includes(decision.action) && decision.confidence > 75) {
+            if (['LONG', 'SHORT'].includes(decision.action) && decision.confidence >= 70) {
                 // Fetch Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('balance').single();
                 const balance = wallet?.balance || 1000;
