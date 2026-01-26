@@ -22,43 +22,42 @@ export interface TradeDecision {
 }
 
 const STRATEGIES = `
-  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND (4H/1H).
+  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND (4H/1H) and CONFLUENCE.
 
   === MACRO TREND DETERMINATION (CRITICAL) ===
-  1.  **BULLISH TREND**:
-      - 4H Price > 4H EMA 50
-      - 1H Price > 1H EMA 50
-      - 1H ADX > 20 (Strong Trend)
+  1.  **STRONG BULLISH**:
+      - 4H/1H Price > EMA 50
+      - White Zone (1m) is UPTREND
       -> **ONLY LOOK FOR LONG SETUPS (Pullbacks).**
 
-  2.  **BEARISH TREND**:
-      - 4H Price < 4H EMA 50
-      - 1H Price < 1H EMA 50
-      - 1H ADX > 20 (Strong Trend)
+  2.  **STRONG BEARISH**:
+      - 4H/1H Price < EMA 50
+      - White Zone (1m) is DOWNTREND
       -> **ONLY LOOK FOR SHORT SETUPS (Rallies).**
 
-  3.  **RANGING / WEAK TREND**:
-      - Price is chopping around EMA 50 on 4H/1H.
-      - 1H ADX < 20.
-      -> **USE STRATEGY B (Mean Reversion). Play both sides but favor the 4H EMA slope.**
+  3.  **NEUTRAL / CONFLICT**:
+      - 4H/1H Trend disagrees with White Zone.
+      -> **USE STRATEGY B (Mean Reversion) or STAY.**
 
   === STRATEGY A: FRACTAL MOMENTUM (TREND FOLLOWING) ===
   *   **When to use**: Strong Bullish or Bearish Macro Trend.
   *   **Logic**:
       1.  **Wait for Pullback**: Price returns to 5m VWAP or 5m EMA 50.
-      2.  **Trigger**: 1m/5m candle rejection (Wick) or Pinbar carrying volume.
+      2.  **Trigger**: 1m/5m candle rejection/Pinbar.
       3.  **Execution**: Enter in direction of the MACRO TREND.
 
   === STRATEGY B: MEAN REVERSION (RANGE) ===
-  *   **When to use**: Weak Trend / Ranging.
+  *   **When to use**: Neutral / Range / Weak Trend.
   *   **Logic**:
       1.  **Regime**: Price chopping around VWAP.
       2.  **Trigger**: RSI Extreme (>70 Sell, <30 Buy) + Bollinger Band Touch.
       3.  **Target**: Return to VWAP.
   
-  === SAFETY RULES ===
-  1.  **Avoid Counter-Trend**: If 4H/1H ADX > 25, DO NOT FADE the trend (e.g., don't Short a strong Bull market just because RSI is 70).
-  2.  **Volume Check**: If 5m Volume is > 200% average, respect the immediate momentum.
+  === SAFETY RULES (MUST FOLLOW) ===
+  1.  **Support/Resistance Check**: 
+      - **NEVER BUY** immediately below a major Resistance (4H/1H EMA 200 or VWAP). Wait for breakout.
+      - **NEVER SELL** immediately above a major Support (4H/1H EMA 200 or VWAP). Wait for breakdown.
+  2.  **Volume**: If 5m Volume is > 200% average, respect the immediate momentum.
 `;
 
 export async function getAiDecision(
@@ -86,20 +85,22 @@ export async function getAiDecision(
     ### MACRO TREND CONTEXT (4H / 1H) - **PRIMARY DRIVER**
     [4 Hour]
     EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    EMA 200 (Major S/R): ${indicators.h4.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Trend Bias: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'BULLISH' : 'BEARISH'}
     
     [1 Hour]
     EMA 50: ${indicators.h1.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    ADX: ${indicators.h1.adx.toFixed(1)} (${indicators.h1.adx > 25 ? 'Trending' : 'Weak'})
+    EMA 200 (Major S/R): ${indicators.h1.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    ADX: ${indicators.h1.adx.toFixed(1)}
     Trend Bias: ${indicators.h1.currentPrice > indicators.h1.ema50 ? 'BULLISH' : 'BEARISH'}
 
     ### MICRO STRUCTURE (5m / 1m) - **ENTRY TIMING**
     [5 Minute]
-    VWAP: ${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    VWAP (Intraday S/R): ${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    EMA 200: ${indicators.m5.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     RSI: ${indicators.m5.rsi.toFixed(1)}
-    ADX: ${indicators.m5.adx.toFixed(1)} (Ignore for trend, use for volatility)
 
-    [1 Minute - White Zone]
+    [1 Minute - White Zone (SuperTrend)]
     Status: ${indicators.m1.whiteZone.status}
     Upper: ${indicators.m1.whiteZone.upper.toFixed(0)} | Lower: ${indicators.m1.whiteZone.lower.toFixed(0)}
     Price: ${indicators.m1.currentPrice.toFixed(2)}
@@ -111,19 +112,22 @@ export async function getAiDecision(
     }
 
     ### DECISION PROCESS
-    1.  **Analyze Macro Trend (4H/1H)**: Determine if we are Bullish, Bearish, or Ranging.
-    2.  **Filter**:
-        - If Bullish: IGNORE all Short signals. Look for Long entries near 5m VWAP.
-        - If Bearish: IGNORE all Long signals. Look for Short entries near 5m VWAP.
-        - If Ranging: Trade Strategy B (RSI extremes).
-    3.  **Check Entry Trigger**: 1m/5m Price Action confirmation.
+    1.  **Analyze Macro Trend (4H/1H)** AND **White Zone**:
+        - If 4H/1H is Bullish AND White Zone is UPTREND -> **STRONG BULLISH** (Look for Long).
+        - If 4H/1H is Bearish AND White Zone is DOWNTREND -> **STRONG BEARISH** (Look for Short).
+        - Otherwise -> **NEUTRAL/RANGING** (Caution / Strategy B).
+    2.  **Check S/R (CRITICAL)**:
+        - Are we hitting 4H/1H EMA 200? Are we hitting VWAP?
+        - If LONG: Ensure we are NOT right below Resistance.
+        - If SHORT: Ensure we are NOT right above Support.
+    3.  **Check Entry**: 5m Pullback + 1m Trigger.
     4.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
       "strategy_used": "TREND_A" | "RANGE_B",
-      "reason": "Concise reasoning based on 4H/1H trend and 5m entry.",
+      "reason": "Explain trend, S/R check, and entry trigger.",
       "confidence": Number (0-100),
       "stopLoss": Number,
       "takeProfit": Number,
