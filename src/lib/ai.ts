@@ -54,10 +54,13 @@ const STRATEGIES = `
       3.  **Target**: Return to VWAP.
   
   === SAFETY RULES (MUST FOLLOW) ===
-  1.  **Support/Resistance Check**: 
-      - **NEVER BUY** immediately below a major Resistance (4H/1H EMA 200 or VWAP). Wait for breakout.
-      - **NEVER SELL** immediately above a major Support (4H/1H EMA 200 or VWAP). Wait for breakdown.
-  2.  **Volume**: If 5m Volume is > 200% average, respect the immediate momentum.
+  1.  **Support/Resistance Check (Confluence)**: 
+      - **Major Levels**: 4H/1H EMA 200, VWAP, *Swing Highs/Lows*, and *White Zone Limits*.
+      - **NEVER BUY** immediately below a Resistance. Breakout must be confirmed (candle close above).
+      - **NEVER SELL** immediately above a Support. Breakdown must be confirmed.
+  2.  **Risk Management (MANDATORY)**:
+      - **RR Ratio**: Must be >= 1.5:1. (Distance to Take Profit >= 1.5 * Distance to Stop Loss).
+      - If strict SL placement yields < 1.5 RR, **SKIP THE TRADE**.
 `;
 
 export async function getAiDecision(
@@ -85,12 +88,14 @@ export async function getAiDecision(
     ### MACRO TREND CONTEXT (4H / 1H) - **PRIMARY DRIVER**
     [4 Hour]
     EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    EMA 200 (Major S/R): ${indicators.h4.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    EMA 200: ${indicators.h4.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    Swing High/Low: $${indicators.h4.struct.high.toLocaleString()} / $${indicators.h4.struct.low.toLocaleString()}
     Trend Bias: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'BULLISH' : 'BEARISH'}
     
     [1 Hour]
     EMA 50: ${indicators.h1.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    EMA 200 (Major S/R): ${indicators.h1.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    EMA 200: ${indicators.h1.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    Swing High/Low: $${indicators.h1.struct.high.toLocaleString()} / $${indicators.h1.struct.low.toLocaleString()}
     ADX: ${indicators.h1.adx.toFixed(1)}
     Trend Bias: ${indicators.h1.currentPrice > indicators.h1.ema50 ? 'BULLISH' : 'BEARISH'}
 
@@ -98,11 +103,12 @@ export async function getAiDecision(
     [5 Minute]
     VWAP (Intraday S/R): ${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     EMA 200: ${indicators.m5.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    Swing High/Low: $${indicators.m5.struct.high.toLocaleString()} / $${indicators.m5.struct.low.toLocaleString()}
     RSI: ${indicators.m5.rsi.toFixed(1)}
 
     [1 Minute - White Zone (SuperTrend)]
     Status: ${indicators.m1.whiteZone.status}
-    Upper: ${indicators.m1.whiteZone.upper.toFixed(0)} | Lower: ${indicators.m1.whiteZone.lower.toFixed(0)}
+    Upper (S/R): ${indicators.m1.whiteZone.upper.toFixed(0)} | Lower (S/R): ${indicators.m1.whiteZone.lower.toFixed(0)}
     Price: ${indicators.m1.currentPrice.toFixed(2)}
 
     ### ACTIVE POSITION
@@ -112,22 +118,21 @@ export async function getAiDecision(
     }
 
     ### DECISION PROCESS
-    1.  **Analyze Macro Trend (4H/1H)** AND **White Zone**:
-        - If 4H/1H is Bullish AND White Zone is UPTREND -> **STRONG BULLISH** (Look for Long).
-        - If 4H/1H is Bearish AND White Zone is DOWNTREND -> **STRONG BEARISH** (Look for Short).
-        - Otherwise -> **NEUTRAL/RANGING** (Caution / Strategy B).
-    2.  **Check S/R (CRITICAL)**:
-        - Are we hitting 4H/1H EMA 200? Are we hitting VWAP?
-        - If LONG: Ensure we are NOT right below Resistance.
-        - If SHORT: Ensure we are NOT right above Support.
-    3.  **Check Entry**: 5m Pullback + 1m Trigger.
-    4.  **Output**: Action, Confidence, Strategy.
+    1.  **Analyze Macro Trend (4H/1H) & White Zone**: Determine GLOBAL BIAS.
+    2.  **Plot Support & Resistance**: 
+        - Collect all Levels: EMA 200s, VWAP, Swing Highs/Lows, White Zone Bounds.
+        - Determine Nearest Support and Nearest Resistance to Current Price.
+    3.  **Evaluate Setup**:
+        - Is there room to move? (Distance to Resistance for Long > Distance to Support for Short?)
+        - **Check RR**: Calculate Potential Risk (Entry - PivotLow) vs Reward (Next Resistance - Entry). Is Ratio >= 1.5?
+    4.  **Confirm Entry**: Price Action Trigger (Pinbar/Engulfing).
+    5.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
       "strategy_used": "TREND_A" | "RANGE_B",
-      "reason": "Explain trend, S/R check, and entry trigger.",
+      "reason": "Explain Trend, S/R, and RR calculation.",
       "confidence": Number (0-100),
       "stopLoss": Number,
       "takeProfit": Number,

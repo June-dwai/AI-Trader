@@ -18,6 +18,10 @@ export interface TimeframeIndicators {
         upper: number;
         lower: number;
     };
+    struct: {
+        high: number;
+        low: number;
+    };
 }
 
 function calculateTFIndicators(candles: Candle[]): TimeframeIndicators {
@@ -127,6 +131,31 @@ function calculateTFIndicators(candles: Candle[]): TimeframeIndicators {
         }
     }
 
+    // --- SWING POINTS (FRACTALS) ---
+    // Simple 5-candle Fractal (High > 2 left & 2 right)
+    // We scan backwards from end-3 (since we need 2 future candles to confirm)
+    let recentStructHigh = 0;
+    let recentStructLow = 0;
+
+    for (let i = candles.length - 3; i >= 2; i--) {
+        const h = highPrices[i];
+        const l = lowPrices[i];
+
+        // Fractal High
+        if (recentStructHigh === 0) {
+            if (h > highPrices[i - 1] && h > highPrices[i - 2] && h > highPrices[i + 1] && h > highPrices[i + 2]) {
+                recentStructHigh = h;
+            }
+        }
+        // Fractal Low
+        if (recentStructLow === 0) {
+            if (l < lowPrices[i - 1] && l < lowPrices[i - 2] && l < lowPrices[i + 1] && l < lowPrices[i + 2]) {
+                recentStructLow = l;
+            }
+        }
+        if (recentStructHigh !== 0 && recentStructLow !== 0) break;
+    }
+
 
     const vwapInput = {
         high: highPrices,
@@ -151,6 +180,10 @@ function calculateTFIndicators(candles: Candle[]): TimeframeIndicators {
             status: whiteZoneStatus,
             upper: whiteZoneUpper,
             lower: whiteZoneLower
+        },
+        struct: {
+            high: recentStructHigh || Math.max(...highPrices.slice(-20)), // Fallback to 20-period high
+            low: recentStructLow || Math.min(...lowPrices.slice(-20))     // Fallback to 20-period low
         }
     };
 }
