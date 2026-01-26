@@ -122,8 +122,9 @@ export async function getAiDecision(
         - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
         - **RANGE Bias**: Sell Resistance, Buy Support.
     4.  **Validate Setup (MANDATORY)**:
-        - **Take Profit (TP)**: Must be at least **$1000** away from entry. (Do not scalp crumbs).
-        - **Stop Loss (SL)**: Must be at least **$500** away from entry.
+        - **Placement**: TP and SL MUST be attached to a specific Structural Level (e.g., EMA 200, Swing High).
+        - **Stop Loss (SL)**: Must be BEHIND a Support/Resistance level AND > $500 from entry.
+        - **Take Profit (TP)**: Must be AT next Support/Resistance level AND > $1000 from entry.
         - **Risk:Reward**: Prioritize setups with RR >= 1.5.
         - If conditions not met, output ACTION: "STAY".
     5.  **Output**: Action, Confidence, Strategy.
@@ -137,7 +138,7 @@ export async function getAiDecision(
       "stopLoss": Number,
       "takeProfit": Number,
       "riskPerTrade": Number,
-      "setup_reason": "EXPLICITLY STATE why SL/TP were chosen. e.g. 'SL placed $500 above 4H EMA 200 Resistance. TP at 1H VWAP Support.'",
+      "setup_reason": "You MUST cite the S/R Level used. Do NOT say 'placed above entry'. Say 'SL placed above 4H Swing High ($88,500) which is >$500 away'.",
       "next_setup": {
         "short_level": Number, // IF BEARISH BIAS: Set to next resistance level. IF BULLISH: MUST BE 0.
         "long_level": Number,  // IF BULLISH BIAS: Set to next support level. IF BEARISH: MUST BE 0.
