@@ -22,45 +22,37 @@ export interface TradeDecision {
 }
 
 const STRATEGIES = `
-  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND (4H/1H) and CONFLUENCE.
+  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND STRUCTURE (EMA 50 vs EMA 200).
 
   === MACRO TREND DETERMINATION (CRITICAL) ===
-  1.  **STRONG BULLISH**:
-      - 4H/1H Price > EMA 50
-      - White Zone (1m) is UPTREND
-      -> **ONLY LOOK FOR LONG SETUPS (Pullbacks).**
+  1.  **BULLISH STRUCTURE** (Golden Cross):
+      - **EMA 50 > EMA 200** on 4H/1H.
+      - **Bias**: LONG ONLY. (Price drops are PULLBACKS to Support).
+      - **Key Supports**: EMA 50, EMA 200, VWAP, Previous Swing Highs.
 
-  2.  **STRONG BEARISH**:
-      - 4H/1H Price < EMA 50
-      - White Zone (1m) is DOWNTREND
-      -> **ONLY LOOK FOR SHORT SETUPS (Rallies).**
+  2.  **BEARISH STRUCTURE** (Death Cross):
+      - **EMA 50 < EMA 200** on 4H/1H.
+      - **Bias**: SHORT ONLY. (Price rallies are RETRACEMENTS to Resistance).
+      - **Key Resistances**: EMA 50, EMA 200, VWAP, Previous Swing Lows.
 
-  3.  **NEUTRAL / CONFLICT**:
-      - 4H/1H Trend disagrees with White Zone.
-      -> **USE STRATEGY B (Mean Reversion) or STAY.**
+  3.  **NEUTRAL / FLAT**:
+      - EMA 50 and EMA 200 are flat/intertwined OR Timeframe Conflict.
+      - **Action**: Use Strategy B (Range).
 
   === STRATEGY A: FRACTAL MOMENTUM (TREND FOLLOWING) ===
-  *   **When to use**: Strong Bullish or Bearish Macro Trend.
-  *   **Logic**:
-      1.  **Wait for Pullback**: Price returns to 5m VWAP or 5m EMA 50.
-      2.  **Trigger**: 1m/5m candle rejection/Pinbar.
-      3.  **Execution**: Enter in direction of the MACRO TREND.
+  *   **Logic**: Enter when Price bounces off a Key Level in the direction of the Structure.
+  *   **Trigger**:
+      1.  **Level Test**: Price touches/nears 4H/1H/5m EMA 200, VWAP, or White Zone Limit.
+      2.  **Reaction**: 1m/5m Pinbar, Engulfing, or Rejection Candle.
+      3.  **Volume**: Volume spike on the reaction candle.
 
   === STRATEGY B: MEAN REVERSION (RANGE) ===
-  *   **When to use**: Neutral / Range / Weak Trend.
-  *   **Logic**:
-      1.  **Regime**: Price chopping around VWAP.
-      2.  **Trigger**: RSI Extreme (>70 Sell, <30 Buy) + Bollinger Band Touch.
-      3.  **Target**: Return to VWAP.
+  *   **Logic**: Fade the extremes of the Range.
+  *   **Trigger**: Bollinger Band Tag + RSI Extreme + Horizontal S/R Level.
   
-  === SAFETY RULES (MUST FOLLOW) ===
-  1.  **Support/Resistance Check (Confluence)**: 
-      - **Major Levels**: 4H/1H EMA 200, VWAP, *Swing Highs/Lows*, and *White Zone Limits*.
-      - **NEVER BUY** immediately below a Resistance. Breakout must be confirmed (candle close above).
-      - **NEVER SELL** immediately above a Support. Breakdown must be confirmed.
-  2.  **Risk Management (MANDATORY)**:
-      - **RR Ratio**: Must be >= 1.5:1. (Distance to Take Profit >= 1.5 * Distance to Stop Loss).
-      - If strict SL placement yields < 1.5 RR, **SKIP THE TRADE**.
+  === SAFETY RULES ===
+  1.  **Do NOT Buy Resistance / Sell Support**: Check distance to next Major Level.
+  2.  **RR Ratio >= 1.5**: Distance to Target > 1.5 * Distance to Stop.
 `;
 
 export async function getAiDecision(
@@ -90,15 +82,14 @@ export async function getAiDecision(
     EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     EMA 200: ${indicators.h4.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Swing High/Low: $${indicators.h4.struct.high.toLocaleString()} / $${indicators.h4.struct.low.toLocaleString()}
-    Trend Structure: ${indicators.h4.ema50 > indicators.h4.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
-    Price Level: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'Above EMA 50' : 'Below EMA 50'}
+    Structure: ${indicators.h4.ema50 > indicators.h4.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
     
     [1 Hour]
     EMA 50: ${indicators.h1.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     EMA 200: ${indicators.h1.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Swing High/Low: $${indicators.h1.struct.high.toLocaleString()} / $${indicators.h1.struct.low.toLocaleString()}
     ADX: ${indicators.h1.adx.toFixed(1)}
-    Trend Structure: ${indicators.h1.ema50 > indicators.h1.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
+    Structure: ${indicators.h1.ema50 > indicators.h1.ema200 ? 'BULLISH (Golden Cross)' : 'BEARISH (Death Cross)'}
 
     ### MICRO STRUCTURE (5m / 1m) - **ENTRY TIMING**
     [5 Minute]
@@ -119,23 +110,27 @@ export async function getAiDecision(
     }
 
     ### DECISION PROCESS
-    1.  **Analyze Macro Structure**: 
-        - Look at EMA 50 vs EMA 200 on 4H/1H.
-        - If EMA 50 < EMA 200 -> **BEARISH BIAS** (Even if Price > EMA 50, it's just a retracement).
-        - If EMA 50 > EMA 200 -> **BULLISH BIAS**.
-    2.  **Define Outlook**:
-        - Should focus on ONE direction matching the Bias.
-        - If Bias is Bearish, 'next_setup' MUST be for a SHORT (e.g., "Wait for rally to X").
-    3.  **Validate Setup (MANDATORY)**:
-        - **Target Profit (TP)**: Must be at least **$1000** away from entry. (Do not scalp crumbs).
-        - **Risk:Reward**: Must be >= 1.5.
-    4.  **Output Decision**: Action, Confidence, Strategy.
+    1.  **Identify Trend Structure**: 
+        - IGNORE Price position relative to EMA 50.
+        - **Look ONLY at EMA 50 vs EMA 200 alignment.**
+        - 50 > 200 = Bullish. 50 < 200 = Bearish.
+    2.  **Identify Key Levels (S/R)**:
+        - Where is the nearest Support? (EMA 200, VWAP, White Zone Lower, Swing Low)
+        - Where is the nearest Resistance? (EMA 200, VWAP, White Zone Upper, Swing High)
+    3.  **Plan Setup**:
+        - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.
+        - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
+        - **RANGE Bias**: Sell Resistance, Buy Support.
+    4.  **Validate**:
+        - TP > $1000 distance?
+        - RR >= 1.5?
+    5.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
       "strategy_used": "TREND_A" | "RANGE_B",
-      "reason": "Explain Trend Structure (EMA Align), S/R check, and RR > 1.5 check.",
+      "reason": "Explain Structure (Cross), S/R Level tested, and Entry Trigger.",
       "confidence": Number (0-100),
       "stopLoss": Number,
       "takeProfit": Number,
@@ -144,7 +139,7 @@ export async function getAiDecision(
       "next_setup": {
         "short_level": Number,
         "long_level": Number,
-        "comment": "Specific plan for the PRIMARY BIAS direction. e.g. 'Short at 98500 (EMA50)'"
+        "comment": "Specific plan: 'Short on rejection at 98500 (1H EMA 200)'"
       }
     }
   `;
