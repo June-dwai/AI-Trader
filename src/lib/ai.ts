@@ -22,28 +22,43 @@ export interface TradeDecision {
 }
 
 const STRATEGIES = `
-  You have TWO strategies available. Select the BEST one based on the current Market Regime.
+  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND (4H/1H).
 
-  === STRATEGY A: FRACTAL MOMENTUM (TREND) ===
-  *   **Best For**: Trending Markets (ADX > 25).
+  === MACRO TREND DETERMINATION (CRITICAL) ===
+  1.  **BULLISH TREND**:
+      - 4H Price > 4H EMA 50
+      - 1H Price > 1H EMA 50
+      - 1H ADX > 20 (Strong Trend)
+      -> **ONLY LOOK FOR LONG SETUPS (Pullbacks).**
+
+  2.  **BEARISH TREND**:
+      - 4H Price < 4H EMA 50
+      - 1H Price < 1H EMA 50
+      - 1H ADX > 20 (Strong Trend)
+      -> **ONLY LOOK FOR SHORT SETUPS (Rallies).**
+
+  3.  **RANGING / WEAK TREND**:
+      - Price is chopping around EMA 50 on 4H/1H.
+      - 1H ADX < 20.
+      -> **USE STRATEGY B (Mean Reversion). Play both sides but favor the 4H EMA slope.**
+
+  === STRATEGY A: FRACTAL MOMENTUM (TREND FOLLOWING) ===
+  *   **When to use**: Strong Bullish or Bearish Macro Trend.
   *   **Logic**:
-      1.  **Trend**: Price > VWAP (Bullish) or Price < VWAP (Bearish).
-      2.  **Validation**: Price & OI rising together.
-      3.  **Entry**: Pullback to VWAP/EMA50 on 5m.
-      4.  **Confirm**: Pinbar/Rejection on 1m WITH VOLUME SUPPORT.
+      1.  **Wait for Pullback**: Price returns to 5m VWAP or 5m EMA 50.
+      2.  **Trigger**: 1m/5m candle rejection (Wick) or Pinbar carrying volume.
+      3.  **Execution**: Enter in direction of the MACRO TREND.
 
   === STRATEGY B: MEAN REVERSION (RANGE) ===
-  *   **Best For**: Chopping/Sideways Markets (ADX < 20).
+  *   **When to use**: Weak Trend / Ranging.
   *   **Logic**:
-      1.  **Regime**: Price chopping around VWAP. Low ADX.
-      2.  **Trigger**: RSI Extreme (>70 Short, <30 Long) AND Price hits Bollinger Band Outer Bands (or simple 2.5 ATR deviation).
-      3.  **Entry**: Reversal candle (Hammer/Shooting Star) at the extremes.
-      4.  **Target**: Return to VWAP (Mean).
+      1.  **Regime**: Price chopping around VWAP.
+      2.  **Trigger**: RSI Extreme (>70 Sell, <30 Buy) + Bollinger Band Touch.
+      3.  **Target**: Return to VWAP.
   
-  === BLIND SPOT & SAFETY RULES ===
-  1.  **Transition Zone (ADX 20-25)**: The trend is unclear. Manage existing positions but **DO NOT ENTER NEW TRADES (STAY)**.
-  2.  **Strategy B Safety Lock**: Even if RSI > 70, **CHECK VOLUME**. If Volume is Spiking (>200% of avg), it's a BREAKOUT, NOT A REVERSAL. **ABORT SHORT**.
-  3.  **1m Noise Filter**: Do not trust 1m patterns unless they have significant volume.
+  === SAFETY RULES ===
+  1.  **Avoid Counter-Trend**: If 4H/1H ADX > 25, DO NOT FADE the trend (e.g., don't Short a strong Bull market just because RSI is 70).
+  2.  **Volume Check**: If 5m Volume is > 200% average, respect the immediate momentum.
 `;
 
 export async function getAiDecision(
@@ -64,82 +79,51 @@ export async function getAiDecision(
     Act as an elite Autonomous AI Trader.
     ${STRATEGIES}
 
-    ### REAL-TIME MARKET DATA (Weighted Aggregation)
+    ### REAL-TIME MARKET DATA
     Current Price: $${marketData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    Funding Rate: ${marketData.fundingRate.toFixed(6)}%
-    Funding Rate History: [${fundingHistory.map(f => f.toFixed(6)).join(', ')}]
-    Open Interest: ${marketData.openInterest.toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} BTC
-    Open Interest History: [${oiHistory.map(oi => oi.toFixed(2)).join(', ')}]
+    Funding: ${marketData.fundingRate.toFixed(6)}% | OI: ${marketData.openInterest.toLocaleString('en-US')} BTC
+
+    ### MACRO TREND CONTEXT (4H / 1H) - **PRIMARY DRIVER**
+    [4 Hour]
+    EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    Trend Bias: ${indicators.h4.currentPrice > indicators.h4.ema50 ? 'BULLISH' : 'BEARISH'}
     
-    ### TECHNICAL INDICATORS
-    [1 Hour (Session)]
-    VWAP: ${indicators.h1.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    ADX: ${indicators.h1.adx.toFixed(1)}
+    [1 Hour]
+    EMA 50: ${indicators.h1.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    ADX: ${indicators.h1.adx.toFixed(1)} (${indicators.h1.adx > 25 ? 'Trending' : 'Weak'})
+    Trend Bias: ${indicators.h1.currentPrice > indicators.h1.ema50 ? 'BULLISH' : 'BEARISH'}
 
-    [5 Minute (Micro)]
+    ### MICRO STRUCTURE (5m / 1m) - **ENTRY TIMING**
+    [5 Minute]
     VWAP: ${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    ATR (14): ${indicators.m5.atr.toFixed(1)}
     RSI: ${indicators.m5.rsi.toFixed(1)}
-    ADX: ${indicators.m5.adx.toFixed(1)}
+    ADX: ${indicators.m5.adx.toFixed(1)} (Ignore for trend, use for volatility)
 
-    [1 Minute (White Zone - SUPER TREND)]
+    [1 Minute - White Zone]
     Status: ${indicators.m1.whiteZone.status}
-    Upper: ${indicators.m1.whiteZone.upper.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    Lower: ${indicators.m1.whiteZone.lower.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    Current Price: ${indicators.m1.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-    *Rule*: 
-    - UPTREND: Favor LONGs.
-    - DOWNTREND: Favor SHORTs.
-    - CHOP: Caution.
+    Upper: ${indicators.m1.whiteZone.upper.toFixed(0)} | Lower: ${indicators.m1.whiteZone.lower.toFixed(0)}
+    Price: ${indicators.m1.currentPrice.toFixed(2)}
 
-    [1 Minute (Execution)]
-    Volume: ${indicators.m1.volume.toLocaleString('en-US')} (Confirm patterns with volume)
-
-    ### ACTIVE POSITION STATUS
+    ### ACTIVE POSITION
     ${activePosition
-      ? `目前 HOLDING ${activePosition.side} | Entry: $${activePosition.entry_price} | PnL: ${activePosition.pnl_percent}% | Size: ${activePosition.size}`
-      : "NO ACTIVE POSITION."
+      ? `HOLDING ${activePosition.side} | Entry: $${activePosition.entry_price} | PnL: ${activePosition.pnl_percent}%`
+      : "NO POSITION"
     }
 
-    ### RECENT TRADING PERFORMANCE
-    ${recentTrades}
-
     ### DECISION PROCESS
-    
-    **IF NO ACTIVE POSITION:**
-    1. **The White Zone Filter (MANDATORY)**:
-       - If Status is 'DOWNTREND', you are FORBIDDEN from taking LONG positions. Only SHORT or STAY.
-       - If Status is 'UPTREND', you are FORBIDDEN from taking SHORT positions. Only LONG or STAY.
-       - If Status is 'CHOP' or 'RUBBING', use Strategy B (Mean Reversion).
-    2. **Identify Regime**: 
-       - Trend (ADX > 25) -> Strategy A.
-       - Range (ADX < 20) -> Strategy B.
-       - **Transition (ADX 20-25)** -> **STAY** (Protect Capital).
-    3. **Strategy Execution**:
-       - **Strategy A (Trend)**: MUST align with White Zone direction.
-       - **Strategy B (Range)**: 
-         - If White Zone is DOWNTREND -> Only look for Short signals (Sell High).
-         - If White Zone is UPTREND -> Only look for Long signals (Buy Low).
-    4. **Safety Checks (CRITICAL)**:
-       - **Strategy B**: If 5m Volume is massive while hitting bands, DO NOT FADE. It's a breakout.
-       - **1m Confirmation**: Is the 1m candle pattern supported by volume?
-    5. **Final Decision**: Output Action, Confidence, and Strategy Used.
-    6. **Formatting**: Use comma separators for prices.
-
-    **IF ACTIVE POSITION EXISTS (MANAGEMENT MODE):**
-    1. **Check Exit**: Is PnL < Stop Loss? Or PnL > Take Profit? -> Output "CLOSE".
-    2. **Smart Pyramiding (Strategy A Only)**:
-       - Condition: PnL > 2% (or significant profit).
-       - Logic: If Pullback occurred and resuming -> Output "ADD".
-       - Requirement: MUST move Stop Loss to Breakeven first.
-    3. **Trailing Stop**: If Price moved significantly in favor, Output "UPDATE_SL" to lock profits.
-    4. **Hold**: If trend is intact and no new triggers -> Output "HOLD".
+    1.  **Analyze Macro Trend (4H/1H)**: Determine if we are Bullish, Bearish, or Ranging.
+    2.  **Filter**:
+        - If Bullish: IGNORE all Short signals. Look for Long entries near 5m VWAP.
+        - If Bearish: IGNORE all Long signals. Look for Short entries near 5m VWAP.
+        - If Ranging: Trade Strategy B (RSI extremes).
+    3.  **Check Entry Trigger**: 1m/5m Price Action confirmation.
+    4.  **Output**: Action, Confidence, Strategy.
 
     ### RESPONSE FORMAT (JSON)
     {
       "action": "LONG" | "SHORT" | "STAY" | "CLOSE" | "ADD" | "UPDATE_SL" | "HOLD",
-      "strategy_used": "TREND_A" | "RANGE_B" | "NONE",
-      "reason": "Explain reasoning. Use commas for prices.",
+      "strategy_used": "TREND_A" | "RANGE_B",
+      "reason": "Concise reasoning based on 4H/1H trend and 5m entry.",
       "confidence": Number (0-100),
       "stopLoss": Number,
       "takeProfit": Number,
