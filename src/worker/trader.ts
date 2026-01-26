@@ -83,8 +83,8 @@ async function runTrader() {
                 entry_price: t.entry_price,
                 size: t.size,
                 pnl_percent: (currentPnlPercent * 100).toFixed(2),
-                tp_price: t.tp_price,
-                sl_price: t.sl_price
+                tp_price: t.take_profit,
+                sl_price: t.stop_loss
             };
         }
 
@@ -171,8 +171,8 @@ async function runTrader() {
                     leverage: LEVERAGE_DYNAMIC(indicators.m5.atr, price),
                     size: sizeBTC,
                     status: 'OPEN',
-                    sl_price: decision.stopLoss, // Storage for UI
-                    tp_price: decision.takeProfit // Storage for UI
+                    stop_loss: decision.stopLoss,
+                    take_profit: decision.takeProfit
                 });
 
                 if (error) console.error("Trade Insert Error", error);
@@ -227,13 +227,13 @@ async function monitorActivePositions() {
 
             // Check Long
             if (trade.side === 'LONG') {
-                if (trade.tp_price && currentPrice >= trade.tp_price) { triggered = true; type = 'TAKE_PROFIT'; }
-                else if (trade.sl_price && currentPrice <= trade.sl_price) { triggered = true; type = 'STOP_LOSS'; }
+                if (trade.take_profit && currentPrice >= trade.take_profit) { triggered = true; type = 'TAKE_PROFIT'; }
+                else if (trade.stop_loss && currentPrice <= trade.stop_loss) { triggered = true; type = 'STOP_LOSS'; }
             }
             // Check Short
             else if (trade.side === 'SHORT') {
-                if (trade.tp_price && currentPrice <= trade.tp_price) { triggered = true; type = 'TAKE_PROFIT'; }
-                else if (trade.sl_price && currentPrice >= trade.sl_price) { triggered = true; type = 'STOP_LOSS'; }
+                if (trade.take_profit && currentPrice <= trade.take_profit) { triggered = true; type = 'TAKE_PROFIT'; }
+                else if (trade.stop_loss && currentPrice >= trade.stop_loss) { triggered = true; type = 'STOP_LOSS'; }
             }
 
             if (triggered) {

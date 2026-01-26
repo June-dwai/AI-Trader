@@ -12,8 +12,8 @@ interface Trade {
     leverage: number;
     size: number;
     opened_at: string;
-    sl_price?: number;
-    tp_price?: number;
+    stop_loss?: number;
+    take_profit?: number;
 }
 
 export default function ActivePosition({ trade }: { trade: Trade | null }) {
@@ -97,8 +97,8 @@ export default function ActivePosition({ trade }: { trade: Trade | null }) {
                 <div>
                     <p className="text-gray-500">Target / Stop</p>
                     <div className="flex gap-3 font-mono text-xs mt-1">
-                        <span className="text-green-400">TP: ${trade.tp_price?.toLocaleString() || '-'}</span>
-                        <span className="text-red-400">SL: ${trade.sl_price?.toLocaleString() || '-'}</span>
+                        <span className="text-green-400">TP: ${trade.take_profit?.toLocaleString() || '-'}</span>
+                        <span className="text-red-400">SL: ${trade.stop_loss?.toLocaleString() || '-'}</span>
                     </div>
                 </div>
             </div>
