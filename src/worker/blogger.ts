@@ -62,8 +62,14 @@ export async function runBlogger() {
               3. **Performance**: Brief PnL summary.
               4. **Outlook**: What are we watching next?
 
-            Output format: JSON { "title": "...", "content": "Markdown content..." } 
-            Ensure "content" is a valid Markdown string.
+            Output format: JSON 
+            { 
+              "title_en": "...", 
+              "content_en": "Markdown...",
+              "title_ko": "...",
+              "content_ko": "Markdown (Korean translation)..."
+            } 
+            Ensure content fields are valid Markdown strings.
         `;
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { responseMimeType: 'application/json' } });
@@ -80,23 +86,34 @@ export async function runBlogger() {
             else throw e;
         }
 
-        const { title, content } = json;
+        if (Array.isArray(json)) {
+            json = json[0];
+        }
 
-        if (!title || !content) {
+        const { title_en, content_en, title_ko, content_ko } = json || {};
+
+        if (!title_en || !content_en) {
             console.error("Missing title or content in response:", json);
             return;
         }
 
-        console.log(`Generated Post: ${title}`);
+        console.log(`Generated Post Title (EN): ${title_en}`);
+        console.log(`Generated Post Content Length: ${content_en?.length}`);
 
         // 3. Save to DB
-        const { error } = await supabaseAdmin.from('posts').insert({
-            title,
-            content
-        });
+        // Note: DB columns must exist (title_ko, content_ko). If not, this might fail or ignore them depending on Supabase config.
+        const { data: insertedData, error } = await supabaseAdmin.from('posts').insert({
+            title: title_en,
+            content: content_en,
+            title_ko: title_ko || title_en,   // Fallback
+            content_ko: content_ko || content_en // Fallback
+        }).select();
 
-        if (error) console.error("Post Insert Error", error);
-        else console.log("Blog Post Published Successfully!");
+        if (error) {
+            console.error("❌ Post Insert Error Full:", JSON.stringify(error, null, 2));
+        } else {
+            console.log("✅ Blog Post Published Successfully!", insertedData);
+        }
 
     } catch (e) {
         console.error("Blogger Error:", e);
