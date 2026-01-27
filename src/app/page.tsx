@@ -19,8 +19,8 @@ async function getWallet() {
 
 async function getStats() {
   const { data: trades } = await supabaseAdmin.from('trades').select('*');
-  const winCount = trades?.filter(t => t.pnl && t.pnl > 0).length || 0;
-  const totalTrades = trades?.length || 0;
+  const winCount = trades?.filter(t => t.status === 'CLOSED' && t.pnl && t.pnl > 0).length || 0;
+  const totalTrades = trades?.filter(t => t.status === 'CLOSED').length || 0;
   const totalPnL = trades?.reduce((acc, t) => acc + (t.pnl || 0), 0) || 0;
 
   return { winCount, totalTrades, totalPnL };

@@ -87,8 +87,26 @@ export default function TradeHistory() {
                                     <td className="px-4 py-3 font-mono text-gray-300 text-xs">
                                         <div className="flex flex-col">
                                             <span>In:  ${trade.entry_price.toLocaleString()}</span>
-                                            <span>Out: ${(trade.entry_price * (1 + (trade.pnl / (trade.size * trade.entry_price)))).toLocaleString()}</span>
-                                            {/* Note: Approx Exit Price calc for display if not stored */}
+                                            <span>Out: ${(trade.entry_price + (trade.pnl / trade.size) * (trade.side === 'LONG' ? 1 : -1)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                                            {/* Corrected Out Price Logic: Entry + (PnL/Size) for Long, Entry - (PnL/Size) [handled by negative PnL? No, PnL is absolute value? No Pnl is signed.] 
+                                                Actually, PnL = (Exit - Entry) * Size * Side(1 or -1)
+                                                Exit - Entry = PnL / (Size * Side)
+                                                Exit = Entry + PnL / (Size * Side)
+                                                If Side=SHORT(-1), Exit = Entry + PnL / (-Size) = Entry - PnL/Size. 
+                                                Wait, if PnL is negative (Loss) for Short:
+                                                Entry=100, Exit=110. PnL = (100-110)*1*(-1) = -10*-1 = +10?? No.
+                                                Short PnL = (Entry - Exit) * Size.
+                                                PnL/Size = Entry - Exit.
+                                                Exit = Entry - (PnL/Size).
+                                                
+                                                Long PnL = (Exit - Entry) * Size.
+                                                PnL/Size = Exit - Entry.
+                                                Exit = Entry + (PnL/Size).
+                                                
+                                                So:
+                                                Long: Entry + PnL/Size
+                                                Short: Entry - PnL/Size
+                                            */}
                                         </div>
                                     </td>
                                     <td className={`px-4 py-3 text-right font-bold font-mono ${isWin ? 'text-green-400' : 'text-red-400'}`}>
