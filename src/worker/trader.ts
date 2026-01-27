@@ -212,7 +212,7 @@ function LEVERAGE_DYNAMIC(atr: number, price: number): number {
 }
 
 // 6. Real-time TP/SL Monitor (Runs frequently)
-async function monitorActivePositions() {
+export async function monitorActivePositions() {
     try {
         const { data: activeTrades } = await supabaseAdmin.from('trades').select('*').eq('status', 'OPEN');
         if (!activeTrades || activeTrades.length === 0) return;
@@ -241,12 +241,17 @@ async function monitorActivePositions() {
                 console.log(`⚡ ${type} TRIGGERED for Trade ${trade.id} @ $${currentPrice}`);
 
                 // Close Trade
-                await supabaseAdmin.from('trades').update({
+                const { error: updateError } = await supabaseAdmin.from('trades').update({
                     status: 'CLOSED',
                     pnl: pnl,
-                    closed_at: new Date().toISOString(),
-                    exit_reason: type // Assuming you might want to add this column later, or just log it
+                    closed_at: new Date().toISOString()
+                    // exit_reason: type // Removed: Column might not exist
                 }).eq('id', trade.id);
+
+                if (updateError) {
+                    console.error(`Failed to close trade ${trade.id}:`, updateError);
+                    continue; // Skip wallet update if trade didn't close
+                }
 
                 // Update Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
