@@ -8,6 +8,7 @@ import { calculateIndicators } from '../lib/indicators';
 import { getAiDecision } from '../lib/ai';
 import { supabaseAdmin } from '../lib/supabase';
 import { sendTelegramMessage } from '../lib/telegram';
+import { runBlogger } from './blogger';
 
 async function runTrader() {
     console.log('--- Starting Trader Bot v2.0 (Microstructure) ---', new Date().toISOString());
@@ -275,6 +276,24 @@ export async function monitorActivePositions() {
     }
 }
 
+// 7. Blog Scheduler
+let lastBlogDate: string | null = null;
+
+async function checkAndRunBlogger() {
+    const now = new Date();
+    // Check if it's 9 AM (Local user time provided by server context is KST +09:00, so we use local hours)
+    const currentHour = now.getHours();
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Run if it's 9 AM or later, AND we haven't run it today yet
+    if (currentHour >= 9 && lastBlogDate !== todayStr) {
+        console.log("⏰ It's 9 AM! Time to write the daily blog.");
+        await runBlogger();
+        lastBlogDate = todayStr;
+    }
+}
+
 runTrader();
 setInterval(runTrader, 5 * 60 * 1000); // AI Logic (5 min)
 setInterval(monitorActivePositions, 10 * 1000); // TP/SL Check (10 sec)
+setInterval(checkAndRunBlogger, 5 * 60 * 1000); // Check every 5 mins

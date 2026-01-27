@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
-async function runBlogger() {
+export async function runBlogger() {
     console.log('--- Starting Daily Blogger ---', new Date().toISOString());
 
     try {
@@ -30,16 +30,16 @@ async function runBlogger() {
 
         // 2. Prepare Context for AI
         const tradeSummary = trades?.map(t =>
-            `- ${t.side} ${t.symbol} (Leverage: ${t.leverage}x): Entry $${t.entry_price}, ${t.status === 'CLOSED' ? `Closed at $${t.closed_at} (PnL: ${t.pnl})` : 'Still OPEN'}`
+            `- ${t.side} ${t.symbol} (Leverage: ${t.leverage}x): Entry $${t.entry_price}, ${t.status === 'CLOSED' ? `Closed at ${new Date(t.closed_at).toLocaleTimeString()} (PnL: ${t.pnl})` : 'Still OPEN'}`
         ).join('\n') || "No trades executed today.";
 
-        // Pick interesting logs (e.g., specific market data points)
-        // To avoid overflowing context, pick 1 log per hour? or just send summary statistics?
-        // Let's send a sampled subset of AI decisions (e.g. why it stayed OUT)
-        const relevantLogs = logs.filter(l => l.type === 'INFO' && l.ai_response).slice(0, 50); // Limit to 50
+        // Pick interesting logs. Limit to 50 relevant ones.
+        const relevantLogs = logs.filter(l => l.type === 'INFO' && l.ai_response).slice(0, 50);
         const logContext = relevantLogs.map(l => {
-            const ai = JSON.parse(l.ai_response || '{}');
-            return `[${new Date(l.created_at).getHours()}:00] Action: ${ai.action} (Conf: ${ai.confidence}%) - Reason: ${ai.reason}`;
+            try {
+                const ai = JSON.parse(l.ai_response || '{}');
+                return `[${new Date(l.created_at).getHours()}:00] Action: ${ai.action} (Conf: ${ai.confidence}%) - Reason: ${ai.reason}`;
+            } catch { return ''; }
         }).join('\n');
 
         const prompt = `
@@ -62,12 +62,30 @@ async function runBlogger() {
               3. **Performance**: Brief PnL summary.
               4. **Outlook**: What are we watching next?
 
-            Output format: JSON { "title": "...", "content": "Markdown content..." }
+            Output format: JSON { "title": "...", "content": "Markdown content..." } 
+            Ensure "content" is a valid Markdown string.
         `;
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { responseMimeType: 'application/json' } });
         const result = await model.generateContent(prompt);
-        const { title, content } = JSON.parse(result.response.text());
+        const responseText = result.response.text();
+
+        let json: any;
+        try {
+            json = JSON.parse(responseText);
+        } catch (e) {
+            console.log("JSON parse error, attempting regex extraction...");
+            const match = responseText.match(/```json\n([\s\S]*?)\n```/);
+            if (match) json = JSON.parse(match[1]);
+            else throw e;
+        }
+
+        const { title, content } = json;
+
+        if (!title || !content) {
+            console.error("Missing title or content in response:", json);
+            return;
+        }
 
         console.log(`Generated Post: ${title}`);
 
@@ -84,6 +102,3 @@ async function runBlogger() {
         console.error("Blogger Error:", e);
     }
 }
-
-// Run immediately for test, then user can schedule it via cron or manually
-runBlogger();
