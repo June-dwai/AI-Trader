@@ -72,6 +72,27 @@ The AI receives a rich context window every 5 minutes:
 
 ---
 
+## ✍️ Daily Alpha Log (Auto-Blog)
+
+The AI autonomously writes a **Daily Trading Journal** every morning at **09:00 AM**.
+
+### How it Works
+1.  **Data Collection**:
+    *   Fetches all **Trades** executed in the last 24 hours.
+    *   Samples **AI Decision Logs** (e.g., "Why did I reject this trade?", "Why did I short here?").
+2.  **AI Analysis (Gemini 2.0)**:
+    *   Gemini acts as a "Fund Manager".
+    *   It synthesizes the trade data and logs into a structured narrative.
+    *   Generates a title and Markdown content containing:
+        *   **Market Recap**: Technical analysis of the day's trend.
+        *   **Strategy Review**: Critique of its own performance (Self-Reflection).
+        *   **Financials**: PnL summary.
+3.  **Publishing**:
+    *   The post is saved to Supabase and instantly visible on the `/blog` page.
+    *   Provides transparency into the "Black Box" of AI decision making.
+
+---
+
 ## 🛠️ Technology Stack
 *   **AI**: Google Gemini 2.0 Flash
 *   **Backend**: Node.js / TypeScript (Next.js Worker)

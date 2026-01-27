@@ -2,6 +2,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,17 +39,14 @@ export default async function BlogPage() {
                     {posts.length === 0 ? (
                         <p className="text-gray-500 text-center py-20">No posts yet. Wait for the daily close.</p>
                     ) : (
-                        posts.map(post => (
+                        posts.map((post: any) => (
                             <article key={post.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-8 hover:border-blue-500/30 transition-colors">
                                 <div className="text-sm text-gray-500 mb-2">
                                     {format(new Date(post.created_at), 'MMMM d, yyyy')}
                                 </div>
                                 <h2 className="text-2xl font-bold text-white mb-6">{post.title}</h2>
                                 <div className="prose prose-invert max-w-none text-gray-300">
-                                    {/* Render newlines as breaks for simplicity, or use a markdown renderer if content is complex */}
-                                    {post.content.split('\n').map((line: string, i: number) => (
-                                        <p key={i} className="mb-4 leading-relaxed">{line}</p>
-                                    ))}
+                                    <ReactMarkdown>{post.content}</ReactMarkdown>
                                 </div>
                             </article>
                         ))
