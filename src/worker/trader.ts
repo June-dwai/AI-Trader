@@ -112,19 +112,27 @@ async function runTrader() {
 
             // Management Logic
             if (decision.action === 'CLOSE') {
-                // Fee Calculation (Approximate)
-                const PNL = (price - trade.entry_price) * trade.size * (trade.side === 'LONG' ? 1 : -1);
-                console.log(`Closing Trade ${trade.id}. PnL: ${PNL.toFixed(2)}`);
+                // Calculate Gross PnL
+                const grossPNL = (price - trade.entry_price) * trade.size * (trade.side === 'LONG' ? 1 : -1);
+
+                // Apply Trading Fees (Binance Futures Taker: 0.04% per trade)
+                const entryFee = trade.entry_price * trade.size * 0.0004;
+                const exitFee = price * trade.size * 0.0004;
+                const totalFees = entryFee + exitFee;
+
+                const netPNL = grossPNL - totalFees;
+
+                console.log(`Closing Trade ${trade.id}. Gross PnL: $${grossPNL.toFixed(2)}, Fees: $${totalFees.toFixed(2)}, Net PnL: $${netPNL.toFixed(2)}`);
                 await supabaseAdmin.from('trades').update({
                     status: 'CLOSED',
-                    pnl: PNL,
+                    pnl: netPNL,
                     closed_at: new Date().toISOString()
                 }).eq('id', trade.id);
 
                 // Update Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
                 if (wallet) {
-                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + PNL }).eq('id', wallet.id);
+                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + netPNL }).eq('id', wallet.id);
                 }
             }
             else if (decision.action === 'ADD') {
@@ -309,13 +317,23 @@ export async function monitorActivePositions() {
             }
 
             if (triggered) {
-                pnl = (currentPrice - trade.entry_price) * trade.size * (trade.side === 'LONG' ? 1 : -1);
+                // Calculate Gross PnL
+                const grossPnl = (currentPrice - trade.entry_price) * trade.size * (trade.side === 'LONG' ? 1 : -1);
+
+                // Apply Trading Fees (Binance Futures Taker: 0.04% per trade)
+                const entryFee = trade.entry_price * trade.size * 0.0004;
+                const exitFee = currentPrice * trade.size * 0.0004;
+                const totalFees = entryFee + exitFee;
+
+                const netPnl = grossPnl - totalFees;
+
                 console.log(`⚡ ${type} TRIGGERED for Trade ${trade.id} @ $${currentPrice}`);
+                console.log(`   Gross PnL: $${grossPnl.toFixed(2)}, Fees: $${totalFees.toFixed(2)}, Net PnL: $${netPnl.toFixed(2)}`);
 
                 // Close Trade
                 const { error: updateError } = await supabaseAdmin.from('trades').update({
                     status: 'CLOSED',
-                    pnl: pnl,
+                    pnl: netPnl,
                     closed_at: new Date().toISOString()
                     // exit_reason: type // Removed: Column might not exist
                 }).eq('id', trade.id);
@@ -328,16 +346,18 @@ export async function monitorActivePositions() {
                 // Update Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
                 if (wallet) {
-                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + pnl }).eq('id', wallet.id);
+                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + netPnl }).eq('id', wallet.id);
                 }
 
                 // Telegram Notify
-                const emoji = pnl > 0 ? '💰' : '🛑';
+                const emoji = netPnl > 0 ? '💰' : '🛑';
                 const msg = `${emoji} *TRADE CLOSED (${type})* ${emoji}\n\n` +
                     `Action: ${trade.side}\n` +
                     `Entry: $${trade.entry_price.toLocaleString()}\n` +
                     `Close: $${currentPrice.toLocaleString()}\n` +
-                    `PnL: $${pnl.toFixed(2)}`;
+                    `Gross PnL: $${grossPnl.toFixed(2)}\n` +
+                    `Fees: -$${totalFees.toFixed(2)}\n` +
+                    `Net PnL: $${netPnl.toFixed(2)}`;
 
                 await sendTelegramMessage(msg);
             }
