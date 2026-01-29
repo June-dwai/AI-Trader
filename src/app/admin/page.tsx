@@ -35,12 +35,15 @@ export default function AdminPage() {
     }, [isAuthenticated]);
 
     const fetchOpenTrades = async () => {
-        const { data } = await supabase
-            .from('trades')
-            .select('*')
-            .eq('status', 'OPEN')
-            .order('created_at', { ascending: false });
-        if (data) setOpenTrades(data);
+        try {
+            const response = await fetch('/api/admin/trades');
+            const result = await response.json();
+            if (result.success) {
+                setOpenTrades(result.trades || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch trades:', error);
+        }
     };
 
     const fetchCurrentPrice = async () => {
@@ -124,7 +127,15 @@ export default function AdminPage() {
         <div className="min-h-screen bg-black p-4">
             <div className="max-w-6xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-white">Admin Control Panel</h1>
+                    <div className="flex items-center gap-4">
+                        <a
+                            href="/"
+                            className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded font-bold transition-colors flex items-center gap-2"
+                        >
+                            ← Home
+                        </a>
+                        <h1 className="text-3xl font-bold text-white">Admin Control Panel</h1>
+                    </div>
                     <div className="text-right">
                         <div className="text-gray-400 text-sm">Current BTC Price</div>
                         <div className="text-2xl font-bold text-white">${currentPrice.toLocaleString()}</div>
@@ -164,8 +175,8 @@ export default function AdminPage() {
                                                 <td className="px-4 py-3 text-gray-400 font-mono">#{trade.id}</td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${trade.side === 'LONG'
-                                                            ? 'bg-green-900/20 text-green-400'
-                                                            : 'bg-red-900/20 text-red-400'
+                                                        ? 'bg-green-900/20 text-green-400'
+                                                        : 'bg-red-900/20 text-red-400'
                                                         }`}>
                                                         {trade.side}
                                                     </span>
