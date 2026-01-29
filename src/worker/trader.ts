@@ -154,6 +154,17 @@ async function runTrader() {
             if (['LONG', 'SHORT'].includes(decision.action) && decision.confidence >= 70) {
 
                 // ===== MANUAL VALIDATION BEFORE ENTRY =====
+                // Check if AI provided TP/SL
+                if (!decision.takeProfit || !decision.stopLoss) {
+                    console.log(`❌ REJECTED: AI did not provide TP/SL (TP: ${decision.takeProfit}, SL: ${decision.stopLoss})`);
+                    await supabaseAdmin.from('logs').insert({
+                        type: 'WARNING',
+                        message: `Trade rejected: Missing TP or SL in AI decision`,
+                        ai_response: JSON.stringify(decision)
+                    });
+                    return;
+                }
+
                 const tpDistance = Math.abs(decision.takeProfit - price);
                 const slDistance = Math.abs(decision.stopLoss - price);
                 const riskRewardRatio = tpDistance / slDistance;
