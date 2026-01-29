@@ -22,37 +22,37 @@ export interface TradeDecision {
 }
 
 const STRATEGIES = `
-  You have TWO strategies available. Select the BEST one based on the GLOBAL TREND STRUCTURE (EMA 50 vs EMA 200).
+  === TRADING RULES (CRITICAL) ===
 
-  === MACRO TREND DETERMINATION (CRITICAL) ===
-  1.  **BULLISH STRUCTURE** (Golden Cross):
-      - **EMA 50 > EMA 200** on 4H/1H.
-      - **Bias**: LONG ONLY. (Price drops are PULLBACKS to Support).
-      - **Key Supports**: EMA 50, EMA 200, VWAP, Previous Swing Highs.
+  **RULE 1: Identify Market Structure**
+  1. Check H4/H1 EMA alignment:
+     - EMA 50 > EMA 200 = BULLISH BIAS (only look for longs)
+     - EMA 50 < EMA 200 = BEARISH BIAS (only look for shorts)
 
-  2.  **BEARISH STRUCTURE** (Death Cross):
-      - **EMA 50 < EMA 200** on 4H/1H.
-      - **Bias**: SHORT ONLY. (Price rallies are RETRACEMENTS to Resistance).
-      - **Key Resistances**: EMA 50, EMA 200, VWAP, Previous Swing Lows.
+  **RULE 2: Identify Price Location**  
+  2. Where is price relative to key levels?
+     - BULLISH BIAS: Wait for pullback to Support (H1/5m EMA 200, VWAP, Swing Low)
+     - BEARISH BIAS: Wait for retracement to Resistance (H1/5m EMA 200, VWAP, Swing High)
 
-  3.  **NEUTRAL / FLAT**:
-      - EMA 50 and EMA 200 are flat/intertwined OR Timeframe Conflict.
-      - **Action**: Use Strategy B (Range).
+  **RULE 3: Micro Confirmation (White Zone)**
+  3. Use 1m White Zone Status as CONFIRMATION only:
+     - BULLISH BIAS + Price bouncing from Support + WZ = UPTREND → Consider LONG
+     - BEARISH BIAS + Price rejecting from Resistance + WZ = DOWNTREND → Consider SHORT
+     - If WZ = CHOP or CHOP_RUBBING → STAY (too noisy, avoid trading)
 
-  === STRATEGY A: FRACTAL MOMENTUM (TREND FOLLOWING) ===
-  *   **Logic**: Enter when Price bounces off a Key Level in the direction of the Structure.
-  *   **Trigger**:
-      1.  **Level Test**: Price touches/nears 4H/1H/5m EMA 200, VWAP, or White Zone Limit.
-      2.  **Reaction**: 1m/5m Pinbar, Engulfing, or Rejection Candle.
-      3.  **Volume**: Volume spike on the reaction candle.
+  **RULE 4: Stop Loss Placement**
+  - LONG: SL must be BELOW the support level by at least $500
+  - SHORT: SL must be ABOVE the resistance level by at least $500
 
-  === STRATEGY B: MEAN REVERSION (RANGE) ===
-  *   **Logic**: Fade the extremes of the Range.
-  *   **Trigger**: Bollinger Band Tag + RSI Extreme + Horizontal S/R Level.
-  
-  === SAFETY RULES ===
-  1.  **Do NOT Buy Resistance / Sell Support**: Check distance to next Major Level.
-  2.  **RR Ratio >= 1.5**: Distance to Target > 1.5 * Distance to Stop.
+  **RULE 5: Take Profit Placement**  
+  - TP must target the NEXT major S/R level
+  - Minimum distance: $1000 from entry
+  - Minimum R:R ratio: 1.5:1
+
+  **CRITICAL WARNING**
+  - DO NOT enter trades just because price "touches" White Zone bands
+  - White Zone is NOT a simple support/resistance - it's a TREND FILTER
+  - Always verify the actual price position before making decisions
 `;
 
 export interface ActivePositionSummary {
@@ -86,6 +86,16 @@ export async function getAiDecision(
     Current Price: $${marketData.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
     Funding: ${marketData.fundingRate.toFixed(6)}% | OI: ${marketData.openInterest.toLocaleString('en-US')} BTC
 
+    ### RECENT TRADING HISTORY (CRITICAL FOR LEARNING)
+    ${recentTrades}
+
+    *** ANTI-REVENGE TRADING RULES ***
+    1. If last 2+ trades were LOSSES in the SAME direction → AVOID that direction for next 2 cycles
+    2. If recent win rate < 40% → Increase confidence threshold to 80%
+    3. NEVER enter the same direction immediately after a loss without strong confirmation
+    4. If unsure, choosing STAY is ALWAYS better than forcing a trade
+    5. Review the trading history CAREFULLY before making any decision
+
     ### MACRO TREND CONTEXT (4H / 1H) - **PRIMARY DRIVER**
     [4 Hour]
     EMA 50: ${indicators.h4.ema50.toLocaleString('en-US', { maximumFractionDigits: 0 })}
@@ -102,15 +112,25 @@ export async function getAiDecision(
 
     ### MICRO STRUCTURE (5m / 1m) - **ENTRY TIMING**
     [5 Minute]
-    VWAP (Intraday S/R): ${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-    EMA 200: ${indicators.m5.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    VWAP (Intraday S/R): $${indicators.m5.vwap.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+    EMA 200: $${indicators.m5.ema200.toLocaleString('en-US', { maximumFractionDigits: 0 })}
     Swing High/Low: $${indicators.m5.struct.high.toLocaleString()} / $${indicators.m5.struct.low.toLocaleString()}
     RSI: ${indicators.m5.rsi.toFixed(1)}
 
-    [1 Minute - White Zone (SuperTrend)]
+    [1 Minute - White Zone (Trend Band)]
     Status: ${indicators.m1.whiteZone.status}
-    Upper (S/R): ${indicators.m1.whiteZone.upper.toFixed(0)} | Lower (S/R): ${indicators.m1.whiteZone.lower.toFixed(0)}
-    Price: ${indicators.m1.currentPrice.toFixed(2)}
+    Upper Band: $${indicators.m1.whiteZone.upper.toFixed(0)}
+    Lower Band: $${indicators.m1.whiteZone.lower.toFixed(0)}
+    Current Price: $${indicators.m1.currentPrice.toFixed(2)}
+
+    *** CRITICAL WHITE ZONE INTERPRETATION ***
+    - UPTREND: Price trading ABOVE both bands → Bullish momentum confirmed
+    - DOWNTREND: Price trading BELOW both bands → Bearish momentum confirmed
+    - CHOP: Price oscillating WITHIN the bands → No clear trend, use caution
+    - CHOP_RUBBING: Avoid trading - High noise, multiple false signals
+
+    DO NOT use White Zone as simple Support/Resistance touch points!
+    Use it to CONFIRM the micro trend direction only.
 
     ### ACTIVE POSITION
     ${activePosition
@@ -118,32 +138,47 @@ export async function getAiDecision(
       : "NO POSITION"
     }
 
-    ### DECISION PROCESS
-    1.  **Identify Trend Structure**: 
-        - IGNORE Price position relative to EMA 50.
-        - **Look ONLY at EMA 50 vs EMA 200 alignment.**
-        - 50 > 200 = Bullish. 50 < 200 = Bearish.
-    2.  **Identify Key Levels (S/R)**:
-        - Where is the nearest Support? (EMA 200, VWAP, White Zone Lower, Swing Low)
-        - Where is the nearest Resistance? (EMA 200, VWAP, White Zone Upper, Swing High)
-    3.  **Plan Setup OR Manage Position**:
-        - **IF HOLDING POSITION**:
-          - **Action**: DECIDE to HOLD, CLOSE, or UPDATE_SL.
-          - **JSON Output**: 'stopLoss' and 'takeProfit' MUST be the CURRENT active levels (unless updating).
-          - **Reasoning**: Explain why we are holding (e.g., "Price still respecting Support").
-        - **IF NO POSITION**:
-          - **BULLISH Bias**: Wait for Price to hit a Support Level -> Buy Confirmation.
-          - **BEARISH Bias**: Wait for Price to hit a Resistance Level -> Sell Confirmation.
-          - **RANGE Bias**: Sell Resistance, Buy Support.
+    ### DECISION PROCESS (Step-by-Step)
 
-    4.  **Validate Setup (For NEW Trades)**:
-        - **Placement**: TP and SL MUST be attached to a specific Structural Level (e.g., EMA 200, Swing High).
-        - **Stop Loss (SL)**: Must be BEHIND a Support/Resistance level AND > $500 from entry.
-        - **Take Profit (TP)**: Must be AT next Support/Resistance level AND > $1000 from entry.
-        - **Risk:Reward**: Prioritize setups with RR >= 1.5.
-        - If conditions not met, output ACTION: "STAY".
+    STEP 1: Check Market Structure
+    - Look at H4/H1 EMA 50 vs EMA 200 alignment
+    - Is it Golden Cross (50>200) or Death Cross (50<200)?
+    - Record: BULLISH BIAS or BEARISH BIAS
 
-    5.  **Output**: Action, Confidence, Strategy.
+    STEP 2: Locate Price Position
+    - Current price: $${marketData.price.toFixed(2)}
+    - If BULLISH BIAS: List distances to Support levels (5m EMA 200, H1 EMA 200, VWAP, Swing Low)
+    - If BEARISH BIAS: List distances to Resistance levels (5m EMA 200, H1 EMA 200, VWAP, Swing High)
+    - Is price ALREADY AT or NEAR a key level (within $300)?
+
+    STEP 3: Check White Zone Status
+    - What is the 1m WZ status?
+    - UPTREND/DOWNTREND = Trend confirmation available
+    - CHOP/CHOP_RUBBING = NO TRADE (too risky, wait for clarity)
+
+    STEP 4: Validate Setup (for NEW trades only)
+    - Entry: Is price at a key S/R level RIGHT NOW?
+    - SL: Must be $500+ away, placed BEHIND the structural level
+    - TP: Must be $1000+ away, targeting the NEXT major S/R level
+    - R:R: Calculate distance to TP / distance to SL. Must be >= 1.5
+
+    STEP 5: Make Decision
+    - IF all conditions met + WZ confirms → LONG or SHORT (confidence >= 70)
+    - IF waiting for price to reach setup level → STAY (explain what level you're waiting for)
+    - IF holding position → HOLD, CLOSE, or UPDATE_SL (explain current status)
+
+    ### CRITICAL: Price vs White Zone Reality Check
+    Before making ANY decision, verify the actual numbers:
+    - Current Price: $${marketData.price.toFixed(2)}
+    - WZ Upper Band: $${indicators.m1.whiteZone.upper.toFixed(0)}
+    - WZ Lower Band: $${indicators.m1.whiteZone.lower.toFixed(0)}
+    - Actual relationship: 
+      * If price > upper → Above WZ (UPTREND zone)
+      * If price < lower → Below WZ (DOWNTREND zone)
+      * If lower < price < upper → Inside WZ (CHOP zone)
+
+    DO NOT say "price touched WZ upper" if the numbers show price is below it!
+    Always state the actual price values in your reasoning.
 
     ### RESPONSE FORMAT (JSON)
     {

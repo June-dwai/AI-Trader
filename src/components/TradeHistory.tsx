@@ -68,6 +68,7 @@ export default function TradeHistory() {
                             <th className="px-4 py-3">Time</th>
                             <th className="px-4 py-3">Side</th>
                             <th className="px-4 py-3">Price</th>
+                            <th className="px-4 py-3">Size</th>
                             <th className="px-4 py-3 text-right">PnL</th>
                         </tr>
                     </thead>
@@ -108,6 +109,9 @@ export default function TradeHistory() {
                                                 Short: Entry - PnL/Size
                                             */}
                                         </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                                        {trade.size?.toFixed(4)} BTC
                                     </td>
                                     <td className={`px-4 py-3 text-right font-bold font-mono ${isWin ? 'text-green-400' : 'text-red-400'}`}>
                                         {isWin ? '+' : ''}{trade.pnl?.toFixed(2)}

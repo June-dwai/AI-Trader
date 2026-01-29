@@ -18,10 +18,19 @@ export async function runBlogger() {
             .gt('created_at', oneDayAgo)
             .order('created_at', { ascending: true }); // Chronological
 
-        const { data: trades } = await supabaseAdmin
+        // Fetch trades closed in last 24h OR currently open
+        const { data: closedTrades } = await supabaseAdmin
             .from('trades')
             .select('*')
-            .gt('created_at', oneDayAgo);
+            .eq('status', 'CLOSED')
+            .gt('closed_at', oneDayAgo);
+
+        const { data: openTrades } = await supabaseAdmin
+            .from('trades')
+            .select('*')
+            .eq('status', 'OPEN');
+
+        const trades = [...(closedTrades || []), ...(openTrades || [])];
 
         if (!logs || logs.length === 0) {
             console.log("No logs to summarize. Skipping.");
@@ -29,9 +38,11 @@ export async function runBlogger() {
         }
 
         // 2. Prepare Context for AI
-        const tradeSummary = trades?.map(t =>
-            `- ${t.side} ${t.symbol} (Leverage: ${t.leverage}x): Entry $${t.entry_price}, ${t.status === 'CLOSED' ? `Closed at ${new Date(t.closed_at).toLocaleTimeString()} (PnL: ${t.pnl})` : 'Still OPEN'}`
-        ).join('\n') || "No trades executed today.";
+        const tradeSummary = trades?.length > 0
+            ? trades.map(t =>
+                `- ${t.side} ${t.symbol} (Leverage: ${t.leverage}x): Entry $${t.entry_price}, ${t.status === 'CLOSED' ? `Closed at ${new Date(t.closed_at).toLocaleTimeString()} (PnL: $${t.pnl?.toFixed(2)})` : 'Still OPEN'}`
+            ).join('\n')
+            : "No trades executed today.";
 
         // Pick interesting logs. Limit to 50 relevant ones.
         const relevantLogs = logs.filter(l => l.type === 'INFO' && l.ai_response).slice(0, 50);

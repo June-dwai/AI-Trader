@@ -152,16 +152,60 @@ async function runTrader() {
         } else {
             // Entry Logic (Only if NO active trade)
             if (['LONG', 'SHORT'].includes(decision.action) && decision.confidence >= 70) {
+
+                // ===== MANUAL VALIDATION BEFORE ENTRY =====
+                const tpDistance = Math.abs(decision.takeProfit - price);
+                const slDistance = Math.abs(decision.stopLoss - price);
+                const riskRewardRatio = tpDistance / slDistance;
+
+                // Validation 1: Minimum TP distance
+                if (tpDistance < 1000) {
+                    console.log(`❌ REJECTED: TP too close ($${tpDistance.toFixed(0)} < $1000)`);
+                    await supabaseAdmin.from('logs').insert({
+                        type: 'WARNING',
+                        message: `Trade rejected: TP distance ${tpDistance.toFixed(0)} < $1000`,
+                        ai_response: JSON.stringify(decision)
+                    });
+                    return;
+                }
+
+                // Validation 2: Minimum SL distance
+                if (slDistance < 500) {
+                    console.log(`❌ REJECTED: SL too close ($${slDistance.toFixed(0)} < $500)`);
+                    await supabaseAdmin.from('logs').insert({
+                        type: 'WARNING',
+                        message: `Trade rejected: SL distance ${slDistance.toFixed(0)} < $500`,
+                        ai_response: JSON.stringify(decision)
+                    });
+                    return;
+                }
+
+                // Validation 3: Risk-Reward Ratio
+                if (riskRewardRatio < 1.5) {
+                    console.log(`❌ REJECTED: R:R ratio ${riskRewardRatio.toFixed(2)} < 1.5`);
+                    await supabaseAdmin.from('logs').insert({
+                        type: 'WARNING',
+                        message: `Trade rejected: R:R ${riskRewardRatio.toFixed(2)} < 1.5 (TP: $${tpDistance.toFixed(0)}, SL: $${slDistance.toFixed(0)})`,
+                        ai_response: JSON.stringify(decision)
+                    });
+                    return;
+                }
+
+                console.log(`✅ VALIDATION PASSED: TP=$${tpDistance.toFixed(0)}, SL=$${slDistance.toFixed(0)}, R:R=${riskRewardRatio.toFixed(2)}`);
+
                 // Fetch Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('balance').single();
                 const balance = wallet?.balance || 1000;
 
                 const riskPerTrade = decision.riskPerTrade || 0.02; // Default 2%
                 const slPrice = decision.stopLoss;
-                const slDistancePercent = Math.abs(price - slPrice) / price;
+
+                // Calculate leverage based on max 10% loss constraint
+                const leverage = LEVERAGE_DYNAMIC(indicators.m5.atr, price, slDistance);
+                const slDistancePercent = slDistance / price;
                 const safeSlDistance = Math.max(slDistancePercent, 0.01);
                 let tradeAmountUSDT = (balance * riskPerTrade) / safeSlDistance;
-                const maxBuyingPower = balance * LEVERAGE_DYNAMIC(indicators.m5.atr, price);
+                const maxBuyingPower = balance * leverage;
                 tradeAmountUSDT = Math.min(tradeAmountUSDT, maxBuyingPower);
                 const sizeBTC = tradeAmountUSDT / price;
 
@@ -169,7 +213,7 @@ async function runTrader() {
                     symbol: 'BTCUSDT',
                     side: decision.action,
                     entry_price: price,
-                    leverage: LEVERAGE_DYNAMIC(indicators.m5.atr, price),
+                    leverage: leverage, // Use calculated leverage
                     size: sizeBTC,
                     status: 'OPEN',
                     stop_loss: decision.stopLoss,
@@ -204,12 +248,28 @@ async function runTrader() {
     }
 }
 
-// Dynamic Leverage Calculation based on Volatility
-function LEVERAGE_DYNAMIC(atr: number, price: number): number {
+// Dynamic Leverage Calculation based on Max Loss Constraint and Volatility
+function LEVERAGE_DYNAMIC(atr: number, price: number, slDistance: number): number {
+    // Goal: Limit max loss to 10% of account
+    // Max Loss % = (SL Distance / Entry Price) * Leverage
+    // Therefore: Leverage = Max Loss % / (SL Distance / Entry Price)
+
+    const slPercent = slDistance / price; // e.g., 0.01 = 1%
+    const maxLossPercent = 0.10; // 10% max loss
+    const calculatedLeverage = maxLossPercent / slPercent;
+
+    // Apply volatility constraint
     const volatilityPercent = atr / price;
-    if (volatilityPercent < 0.005) return 20; // Low Volatility -> 20x
-    if (volatilityPercent < 0.01) return 10;  // Medium -> 10x
-    return 5;                                 // High Volatility -> 5x
+    let maxLeverageByVolatility = 20;
+    if (volatilityPercent >= 0.01) maxLeverageByVolatility = 5;  // High Volatility -> 5x
+    else if (volatilityPercent >= 0.005) maxLeverageByVolatility = 10; // Medium -> 10x
+    // else Low Volatility -> 20x
+
+    // Use the LOWER of the two (more conservative)
+    const finalLeverage = Math.min(calculatedLeverage, maxLeverageByVolatility);
+
+    // Cap at 20x, minimum 2x
+    return Math.max(2, Math.min(20, Math.floor(finalLeverage)));
 }
 
 // 6. Real-time TP/SL Monitor (Runs frequently)
