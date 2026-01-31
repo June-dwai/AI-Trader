@@ -216,13 +216,16 @@ async function runTrader() {
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('balance').single();
                 const balance = wallet?.balance || 1000;
 
-                const riskPerTrade = decision.riskPerTrade || 0.02; // Default 2%
+                const riskPerTrade = decision.riskPerTrade || 0.10; // Default 10%
                 const slPrice = decision.stopLoss;
 
                 // Calculate leverage based on max 10% loss constraint
                 const leverage = LEVERAGE_DYNAMIC(indicators.m5.atr, price, slDistance);
                 const slDistancePercent = slDistance / price;
-                const safeSlDistance = Math.max(slDistancePercent, 0.01);
+
+                // Clamp min SL percent to 0.2% to avoid division by near-zero (was 1%)
+                const safeSlDistance = Math.max(slDistancePercent, 0.002);
+
                 let tradeAmountUSDT = (balance * riskPerTrade) / safeSlDistance;
                 const maxBuyingPower = balance * leverage;
                 tradeAmountUSDT = Math.min(tradeAmountUSDT, maxBuyingPower);
@@ -269,7 +272,7 @@ async function runTrader() {
 
 // Dynamic Leverage Calculation based on Max Loss Constraint and Volatility
 function LEVERAGE_DYNAMIC(atr: number, price: number, slDistance: number): number {
-    // Goal: Limit max loss to 10% of account
+    // Goal: Limit max loss to 10% of account (Margin Basis)
     // Max Loss % = (SL Distance / Entry Price) * Leverage
     // Therefore: Leverage = Max Loss % / (SL Distance / Entry Price)
 
