@@ -33,7 +33,15 @@ function TradingViewChart() {
         "save_image": false,
         "calendar": false,
         "hide_volume": false,
-        "support_host": "https://www.tradingview.com"
+        "support_host": "https://www.tradingview.com",
+        "studies": [
+          {
+            "id": "MAExp@tv-basicstudies",
+            "inputs": {
+              "length": 200
+            }
+          }
+        ]
       }`;
 
     containerCallback.current.appendChild(script);
