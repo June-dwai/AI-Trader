@@ -82,8 +82,8 @@ export default function PerformanceChart() {
     });
 
     const tabs: { id: ChartTab; name: string }[] = [
-        { id: 'balance', name: '자산 추이' },
-        { id: 'vsBTC', name: 'vs BTC' },
+        { id: 'balance', name: '자산 추이(USDT)' },
+        { id: 'vsBTC', name: 'vs BTC(%)' },
         { id: 'dailyPnl', name: '일간 수익(USDT)' },
         { id: 'dailyReturn', name: '일간 수익(%)' }
     ];
@@ -144,8 +144,7 @@ export default function PerformanceChart() {
                                 formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(2)}%` : 'N/A'}
                             />
                             <Line type="monotone" dataKey="usdtReturn" stroke="#10B981" strokeWidth={2} dot={false} name="Portfolio (%)" />
-                            <Line type="monotone" dataKey="btcReturn" stroke="#F59E0B" strokeWidth={2} dot={false} name="BTC (%)" />
-                            <Line type="monotone" dataKey="alpha" stroke="#3B82F6" strokeWidth={2} dot={false} name="Alpha (%)" />
+                            <Line type="monotone" dataKey="btcReturn" stroke="#EF4444" strokeWidth={2} dot={false} name="BTC (%)" />
                         </LineChart>
                     )}
 
