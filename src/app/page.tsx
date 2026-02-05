@@ -97,19 +97,17 @@ export default async function Home() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* 1. 현재 잔고 */}
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2">
               <p className="text-gray-400 text-sm font-medium">현재 잔고</p>
+              <span className={`text-sm font-medium ${(wallet.balance - 1000) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ({(wallet.balance - 1000) >= 0 ? '+' : ''}{Math.floor(wallet.balance - 1000).toLocaleString()} USDT)
+              </span>
             </div>
-            <div className="flex flex-col gap-1 mt-2">
-              <div className="flex items-end gap-2">
-                <p className="text-3xl font-bold text-white">
-                  ${wallet.balance.toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-500 mb-1">USDT</p>
-              </div>
-              <p className={`text-sm font-medium ${(wallet.balance - 1000) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(wallet.balance - 1000) >= 0 ? '+' : ''}${(wallet.balance - 1000).toLocaleString()} USDT
+            <div className="flex items-end gap-2 mt-2">
+              <p className="text-3xl font-bold text-white">
+                ${wallet.balance.toLocaleString()}
               </p>
+              <p className="text-sm text-gray-500 mb-1">USDT</p>
             </div>
           </div>
 
