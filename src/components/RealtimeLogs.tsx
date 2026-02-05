@@ -190,19 +190,19 @@ function AILogCard({ log }: { log: Log }) {
                     </div>
                 )}
 
-                {/* TP/SL Levels */}
-                {(takeProfit || stopLoss) && (
+                {/* TP/SL Levels - Only show if values are greater than 0 */}
+                {((takeProfit ?? 0) > 0 || (stopLoss ?? 0) > 0) && (
                     <div className="flex gap-2 text-[10px] font-mono">
-                        {takeProfit && (
+                        {(takeProfit ?? 0) > 0 && (
                             <div className="flex-1 bg-green-900/20 border border-green-900/30 rounded px-2 py-1">
                                 <div className="text-green-400 font-bold">TP</div>
-                                <div className="text-white">${takeProfit.toLocaleString()}</div>
+                                <div className="text-white">${takeProfit!.toLocaleString()}</div>
                             </div>
                         )}
-                        {stopLoss && (
+                        {(stopLoss ?? 0) > 0 && (
                             <div className="flex-1 bg-red-900/20 border border-red-900/30 rounded px-2 py-1">
                                 <div className="text-red-400 font-bold">SL</div>
-                                <div className="text-white">${stopLoss.toLocaleString()}</div>
+                                <div className="text-white">${stopLoss!.toLocaleString()}</div>
                             </div>
                         )}
                     </div>
