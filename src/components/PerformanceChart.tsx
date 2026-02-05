@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/lib/supabase';
 
 type ChartTab = 'balance' | 'vsBTC' | 'dailyPnl' | 'dailyReturn';
@@ -17,6 +17,8 @@ interface WalletHistoryData {
 interface ChartDataPoint {
     date: string;
     balance: number;
+    usdtReturn: number;
+    btcReturn: number;
     alpha: number;
     dailyPnl: number;
     dailyReturn: number;
@@ -71,6 +73,8 @@ export default function PerformanceChart() {
                 day: 'numeric'
             }),
             balance: d.balance,
+            usdtReturn: usdtReturn,
+            btcReturn: btcReturn,
             alpha: alpha,
             dailyPnl: d.daily_pnl || 0,
             dailyReturn: d.daily_return_pct || 0
@@ -137,9 +141,10 @@ export default function PerformanceChart() {
                             <Tooltip
                                 contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
                                 labelStyle={{ color: '#E5E7EB' }}
-                                itemStyle={{ color: '#3B82F6' }}
                                 formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(2)}%` : 'N/A'}
                             />
+                            <Line type="monotone" dataKey="usdtReturn" stroke="#10B981" strokeWidth={2} dot={false} name="Portfolio (%)" />
+                            <Line type="monotone" dataKey="btcReturn" stroke="#F59E0B" strokeWidth={2} dot={false} name="BTC (%)" />
                             <Line type="monotone" dataKey="alpha" stroke="#3B82F6" strokeWidth={2} dot={false} name="Alpha (%)" />
                         </LineChart>
                     )}
@@ -155,10 +160,16 @@ export default function PerformanceChart() {
                             />
                             <Bar
                                 dataKey="dailyPnl"
-                                fill="#10B981"
                                 name="Daily PnL (USDT)"
                                 radius={[4, 4, 0, 0]}
-                            />
+                            >
+                                {chartData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.dailyPnl >= 0 ? '#10B981' : '#EF4444'}
+                                    />
+                                ))}
+                            </Bar>
                         </BarChart>
                     )}
 
@@ -174,10 +185,16 @@ export default function PerformanceChart() {
                             />
                             <Bar
                                 dataKey="dailyReturn"
-                                fill="#8B5CF6"
                                 name="Daily Return (%)"
                                 radius={[4, 4, 0, 0]}
-                            />
+                            >
+                                {chartData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.dailyReturn >= 0 ? '#10B981' : '#EF4444'}
+                                    />
+                                ))}
+                            </Bar>
                         </BarChart>
                     )}
                 </ResponsiveContainer>

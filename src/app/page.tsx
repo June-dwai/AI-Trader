@@ -99,7 +99,7 @@ export default async function Home() {
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
             <p className="text-gray-400 text-sm font-medium">현재 잔고</p>
             <div className="flex items-end gap-2 mt-2">
-              <p className="text-4xl font-bold text-white">
+              <p className="text-3xl font-bold text-white">
                 ${wallet.balance.toLocaleString()}
               </p>
               <p className="text-sm text-gray-500 mb-1">USDT</p>
@@ -110,7 +110,7 @@ export default async function Home() {
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
             <p className="text-gray-400 text-sm font-medium">알파 수익 (vs BTC)</p>
             <div className="flex items-end gap-2 mt-2">
-              <p className={`text-4xl font-bold ${performanceStats.alpha >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-3xl font-bold ${performanceStats.alpha >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {performanceStats.alpha >= 0 ? '+' : ''}{performanceStats.alpha.toFixed(1)}%
               </p>
             </div>
@@ -120,7 +120,7 @@ export default async function Home() {
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
             <p className="text-gray-400 text-sm font-medium">평균 일수익</p>
             <div className="flex items-end gap-2 mt-2">
-              <p className={`text-4xl font-bold ${performanceStats.avgDailyPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-3xl font-bold ${performanceStats.avgDailyPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {performanceStats.avgDailyPnl >= 0 ? '+' : ''}${performanceStats.avgDailyPnl.toFixed(2)}
               </p>
             </div>
@@ -130,7 +130,7 @@ export default async function Home() {
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
             <p className="text-gray-400 text-sm font-medium">승률</p>
             <div className="flex items-end gap-2 mt-2">
-              <p className="text-4xl font-bold text-white">
+              <p className="text-3xl font-bold text-white">
                 {stats.totalTrades > 0 ? ((stats.winCount / stats.totalTrades) * 100).toFixed(1) : 0}%
               </p>
               <p className="text-sm text-gray-500 mb-1">
