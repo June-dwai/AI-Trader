@@ -383,7 +383,40 @@ export async function checkTPSL(currentPrice: number) {
                 // Update Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
                 if (wallet) {
-                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + netPnl }).eq('id', wallet.id);
+                    const newBalance = wallet.balance + netPnl;
+                    await supabaseAdmin.from('wallet').update({ balance: newBalance }).eq('id', wallet.id);
+
+                    // Record wallet history
+                    const { data: prevHistory } = await supabaseAdmin
+                        .from('wallet_history')
+                        .select('balance, timestamp')
+                        .order('timestamp', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    let dailyPnl = null;
+                    let dailyReturnPct = null;
+
+                    if (prevHistory) {
+                        const prevDate = new Date(prevHistory.timestamp).toDateString();
+                        const currDate = new Date().toDateString();
+
+                        if (prevDate !== currDate) {
+                            // New day - calculate daily metrics
+                            dailyPnl = newBalance - prevHistory.balance;
+                            dailyReturnPct = prevHistory.balance !== 0 ? (dailyPnl / prevHistory.balance) * 100 : 0;
+                        }
+                    }
+
+                    await supabaseAdmin.from('wallet_history').insert({
+                        timestamp: new Date().toISOString(),
+                        balance: newBalance,
+                        btc_price: currentPrice,
+                        daily_pnl: dailyPnl,
+                        daily_return_pct: dailyReturnPct
+                    });
+
+                    console.log(`📊 Wallet history recorded: ${newBalance.toFixed(2)} USDT @ BTC ${currentPrice.toFixed(2)}`);
                 }
 
                 // Telegram Notify
