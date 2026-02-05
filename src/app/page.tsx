@@ -2,11 +2,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 import PriceTicker from '@/components/PriceTicker';
 import RealtimeLogs from '@/components/RealtimeLogs';
 import ActivePosition from '@/components/ActivePosition';
-import { PlayCircle, Activity } from 'lucide-react';
 import TradeHistory from '@/components/TradeHistory';
 import TradingViewChart from '@/components/TradingViewChart';
-// import DeepChart from '@/components/DeepChart';
-import WalletCard from '@/components/WalletCard';
+import PerformanceChart from '@/components/PerformanceChart';
 
 // Force dynamic rendering since we fetch DB data
 export const dynamic = 'force-dynamic';
@@ -26,6 +24,39 @@ async function getStats() {
   return { winCount, totalTrades, totalPnL };
 }
 
+async function getPerformanceStats() {
+  const { data: history } = await supabaseAdmin
+    .from('wallet_history')
+    .select('*')
+    .order('timestamp', { ascending: true });
+
+  if (!history || history.length === 0) {
+    return { alpha: 0, avgDailyPnl: 0 };
+  }
+
+  // Calculate alpha vs BTC
+  const initialBalance = 1000;
+  const currentBalance = history[history.length - 1].balance;
+  const usdtReturn = ((currentBalance - initialBalance) / initialBalance) * 100;
+
+  const initialBtc = history[0].btc_price;
+  const currentBtc = history[history.length - 1].btc_price;
+  const btcReturn = ((currentBtc - initialBtc) / initialBtc) * 100;
+
+  const alpha = usdtReturn - btcReturn;
+
+  // Calculate average daily PnL
+  const dailyPnls = history
+    .map(h => h.daily_pnl)
+    .filter(p => p !== null) as number[];
+
+  const avgDailyPnl = dailyPnls.length > 0
+    ? dailyPnls.reduce((a, b) => a + b, 0) / dailyPnls.length
+    : 0;
+
+  return { alpha, avgDailyPnl };
+}
+
 async function getActiveTrade() {
   const { data } = await supabaseAdmin.from('trades').select('*').eq('status', 'OPEN').single();
   return data; // Returns null if no active trade
@@ -34,6 +65,7 @@ async function getActiveTrade() {
 export default async function Home() {
   const wallet = await getWallet();
   const stats = await getStats();
+  const performanceStats = await getPerformanceStats();
   const activeTrade = await getActiveTrade();
 
   return (
@@ -62,33 +94,48 @@ export default async function Home() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Wallet & WinRate Cards */}
-          <WalletCard
-            initialBalance={wallet.balance || 1000}
-            initialPnL={stats.totalPnL}
-            activeTrade={activeTrade}
-          />
-
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 1. 현재 잔고 */}
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-            <p className="text-gray-400 text-sm font-medium">Win Rate</p>
+            <p className="text-gray-400 text-sm font-medium">현재 잔고</p>
+            <div className="flex items-end gap-2 mt-2">
+              <p className="text-4xl font-bold text-white">
+                ${wallet.balance.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500 mb-1">USDT</p>
+            </div>
+          </div>
+
+          {/* 2. 알파 수익 (vs BTC) */}
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+            <p className="text-gray-400 text-sm font-medium">알파 수익 (vs BTC)</p>
+            <div className="flex items-end gap-2 mt-2">
+              <p className={`text-4xl font-bold ${performanceStats.alpha >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {performanceStats.alpha >= 0 ? '+' : ''}{performanceStats.alpha.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+
+          {/* 3. 평균 일수익 */}
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+            <p className="text-gray-400 text-sm font-medium">평균 일수익</p>
+            <div className="flex items-end gap-2 mt-2">
+              <p className={`text-4xl font-bold ${performanceStats.avgDailyPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {performanceStats.avgDailyPnl >= 0 ? '+' : ''}${performanceStats.avgDailyPnl.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* 4. 승률 */}
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+            <p className="text-gray-400 text-sm font-medium">승률</p>
             <div className="flex items-end gap-2 mt-2">
               <p className="text-4xl font-bold text-white">
                 {stats.totalTrades > 0 ? ((stats.winCount / stats.totalTrades) * 100).toFixed(1) : 0}%
               </p>
               <p className="text-sm text-gray-500 mb-1">
-                ({stats.winCount}/{stats.totalTrades} Trades)
+                ({stats.winCount}/{stats.totalTrades})
               </p>
-            </div>
-          </div>
-
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col justify-center items-center text-center space-y-3">
-            <div className="p-3 bg-blue-500/10 rounded-full text-blue-400">
-              <Activity className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-300">Status: <span className="text-green-400 font-bold">Active</span></p>
-              <p className="text-xs text-gray-500 mt-1">Next evaluation in ~5 mins</p>
             </div>
           </div>
         </div>
@@ -109,37 +156,18 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Logs */}
-          <div className="lg:col-span-2 space-y-8">
-            <RealtimeLogs />
+        {/* PERFORMANCE CHART SECTION */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-3">
+            <PerformanceChart />
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* ... Marketing/Strategy info ... */}
-            <div className="bg-gradient-to-tr from-purple-900/20 to-blue-900/20 border border-purple-500/30 p-6 rounded-2xl">
-              <h3 className="text-lg font-bold text-white mb-2">Detailed Signals on Telegram</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Get real-time notifications for every AI decision, including entry price, stop-loss, and reasoning.
-              </p>
-              <button className="w-full py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                <PlayCircle className="w-4 h-4" />
-                Subscribe ($4.99/mo)
-              </button>
-            </div>
-
-            <div className="p-6 border border-gray-800 rounded-2xl text-xs text-gray-500 leading-relaxed">
-              <p className="font-bold text-gray-400 mb-2">Strategy Info (v2.0)</p>
-              <ul className="space-y-2 list-disc pl-4">
-                <li>Model: Google Gemini 2.0 Flash</li>
-                <li>Logic: Microstructure & Fractal</li>
-                <li>Leverage: Dynamic (5x - 20x)</li>
-                <li>Memory: Anti-Catastrophic Forgetting</li>
-                <li>Risk: AI-Adaptive SL/TP</li>
-              </ul>
-            </div>
+        {/* Main Content Area */}
+        <div className="grid grid-cols-1 gap-8">
+          {/* Logs - Full Width */}
+          <div>
+            <RealtimeLogs />
           </div>
         </div>
 

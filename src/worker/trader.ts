@@ -9,6 +9,7 @@ import { getAiDecision } from '../lib/ai';
 import { supabaseAdmin } from '../lib/supabase';
 import { sendTelegramMessage } from '../lib/telegram';
 import { runBlogger } from './blogger';
+import { BinancePriceWebSocket } from '../lib/binance-ws';
 
 async function runTrader() {
     console.log('--- Starting Trader Bot v2.0 (Microstructure) ---', new Date().toISOString());
@@ -132,7 +133,43 @@ async function runTrader() {
                 // Update Wallet
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('id, balance').single();
                 if (wallet) {
-                    await supabaseAdmin.from('wallet').update({ balance: wallet.balance + netPNL }).eq('id', wallet.id);
+                    const newBalance = wallet.balance + netPNL;
+                    await supabaseAdmin.from('wallet').update({ balance: newBalance }).eq('id', wallet.id);
+
+                    // Record wallet history
+                    const currentBtcPrice = price; // Use current price
+
+                    // Get previous history to calculate daily metrics
+                    const { data: prevHistory } = await supabaseAdmin
+                        .from('wallet_history')
+                        .select('balance, timestamp')
+                        .order('timestamp', { ascending: false })
+                        .limit(1)
+                        .single();
+
+                    let dailyPnl = null;
+                    let dailyReturnPct = null;
+
+                    if (prevHistory) {
+                        const prevDate = new Date(prevHistory.timestamp).toDateString();
+                        const currDate = new Date().toDateString();
+
+                        if (prevDate !== currDate) {
+                            // New day - calculate daily metrics
+                            dailyPnl = newBalance - prevHistory.balance;
+                            dailyReturnPct = prevHistory.balance !== 0 ? (dailyPnl / prevHistory.balance) * 100 : 0;
+                        }
+                    }
+
+                    await supabaseAdmin.from('wallet_history').insert({
+                        timestamp: new Date().toISOString(),
+                        balance: newBalance,
+                        btc_price: currentBtcPrice,
+                        daily_pnl: dailyPnl,
+                        daily_return_pct: dailyReturnPct
+                    });
+
+                    console.log(`📊 Wallet history recorded: ${newBalance.toFixed(2)} USDT @ BTC ${currentBtcPrice.toFixed(2)}`);
                 }
             }
             else if (decision.action === 'ADD') {
@@ -216,7 +253,8 @@ async function runTrader() {
                 const { data: wallet } = await supabaseAdmin.from('wallet').select('balance').single();
                 const balance = wallet?.balance || 1000;
 
-                const riskPerTrade = decision.riskPerTrade || 0.10; // Default 10%
+                // FIXED: Always risk 10% of account (ignore AI's riskPerTrade to ensure consistency)
+                const riskPerTrade = 0.10; // 10% fixed
                 const slPrice = decision.stopLoss;
 
                 // Calculate leverage based on max 10% loss constraint
@@ -294,19 +332,16 @@ function LEVERAGE_DYNAMIC(atr: number, price: number, slDistance: number): numbe
     return Math.max(2, Math.min(20, Math.floor(finalLeverage)));
 }
 
-// 6. Real-time TP/SL Monitor (Runs frequently)
-export async function monitorActivePositions() {
+// 6. Real-time TP/SL Monitor (WebSocket-based)
+// Triggered instantly on every price update from Binance WebSocket
+export async function checkTPSL(currentPrice: number) {
     try {
         const { data: activeTrades } = await supabaseAdmin.from('trades').select('*').eq('status', 'OPEN');
         if (!activeTrades || activeTrades.length === 0) return;
 
-        const { data: priceData } = await axios.get('https://fapi.binance.com/fapi/v1/ticker/price?symbol=BTCUSDT');
-        const currentPrice = parseFloat(priceData.price);
-
         for (const trade of activeTrades) {
             let triggered = false;
             let type = '';
-            let pnl = 0;
 
             // Check Long
             if (trade.side === 'LONG') {
@@ -330,7 +365,7 @@ export async function monitorActivePositions() {
 
                 const netPnl = grossPnl - totalFees;
 
-                console.log(`⚡ ${type} TRIGGERED for Trade ${trade.id} @ $${currentPrice}`);
+                console.log(`⚡ ${type} TRIGGERED for Trade ${trade.id} @ $${currentPrice.toLocaleString()}`);
                 console.log(`   Gross PnL: $${grossPnl.toFixed(2)}, Fees: $${totalFees.toFixed(2)}, Net PnL: $${netPnl.toFixed(2)}`);
 
                 // Close Trade
@@ -338,7 +373,6 @@ export async function monitorActivePositions() {
                     status: 'CLOSED',
                     pnl: netPnl,
                     closed_at: new Date().toISOString()
-                    // exit_reason: type // Removed: Column might not exist
                 }).eq('id', trade.id);
 
                 if (updateError) {
@@ -366,7 +400,7 @@ export async function monitorActivePositions() {
             }
         }
     } catch (e) {
-        console.error("Monitor Error:", e);
+        console.error("TP/SL Monitor Error:", e);
     }
 }
 
@@ -387,7 +421,24 @@ async function checkAndRunBlogger() {
     }
 }
 
+// ===== MAIN EXECUTION =====
 runTrader();
 setInterval(runTrader, 5 * 60 * 1000); // AI Logic (5 min)
-setInterval(monitorActivePositions, 10 * 1000); // TP/SL Check (10 sec)
 setInterval(checkAndRunBlogger, 5 * 60 * 1000); // Check every 5 mins
+
+// ===== WEBSOCKET TP/SL MONITOR =====
+// Real-time monitoring via WebSocket (replaces 10-second REST API polling)
+const priceWs = new BinancePriceWebSocket();
+priceWs.onPriceUpdate((price) => {
+    checkTPSL(price); // Instant TP/SL check on every price update
+});
+priceWs.connect();
+
+console.log('🚀 AI Trader started with real-time WebSocket TP/SL monitoring');
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n🛑 Shutting down gracefully...');
+    priceWs.disconnect();
+    process.exit(0);
+});
