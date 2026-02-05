@@ -183,10 +183,12 @@ function AILogCard({ log }: { log: Log }) {
 
             {/* Card Content */}
             <div className="px-3 py-2 space-y-2">
-                {/* Entry Reason (First line of reason) */}
-                <div className="text-xs text-gray-300 leading-relaxed">
-                    {reason.split('\n')[0]}
-                </div>
+                {/* Entry Reason - Only show when NOT expanded */}
+                {!isExpanded && (
+                    <div className="text-xs text-gray-300 leading-relaxed">
+                        {reason.split('\n')[0]}
+                    </div>
+                )}
 
                 {/* TP/SL Levels */}
                 {(takeProfit || stopLoss) && (
@@ -206,8 +208,8 @@ function AILogCard({ log }: { log: Log }) {
                     </div>
                 )}
 
-                {/* Watch Levels (for STAY) */}
-                {next_setup && (
+                {/* Watch Levels (for STAY) - Only show if there are non-zero values */}
+                {next_setup && (next_setup.short_level > 0 || next_setup.long_level > 0) && (
                     <div className="text-[10px] font-mono text-gray-400 flex justify-between">
                         {next_setup.short_level > 0 && (
                             <span className="text-red-400">SHORT @ ${next_setup.short_level.toLocaleString()}</span>
