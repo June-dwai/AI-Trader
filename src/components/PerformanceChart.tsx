@@ -59,7 +59,7 @@ export default function PerformanceChart() {
     }
 
     // Calculate vs BTC returns and prepare chart data
-    const chartData: ChartDataPoint[] = data.map((d) => {
+    const chartData: ChartDataPoint[] = data.map((d, index) => {
         const initialBtc = data[0]?.btc_price || 1;
         const initialBalance = 1000;
 
@@ -67,11 +67,17 @@ export default function PerformanceChart() {
         const usdtReturn = ((d.balance - initialBalance) / initialBalance) * 100;
         const alpha = usdtReturn - btcReturn;
 
+        // Use timestamp with time to ensure unique keys
+        const dateObj = new Date(d.timestamp);
+        const dateLabel = dateObj.toLocaleDateString('ko-KR', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
         return {
-            date: new Date(d.timestamp).toLocaleDateString('ko-KR', {
-                month: 'short',
-                day: 'numeric'
-            }),
+            date: dateLabel,
             balance: d.balance,
             usdtReturn: usdtReturn,
             btcReturn: btcReturn,
